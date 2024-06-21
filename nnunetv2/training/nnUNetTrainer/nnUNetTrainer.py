@@ -70,8 +70,8 @@ from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 
 
 class nnUNetTrainer(object):
-    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
-                 device: torch.device = torch.device('cuda')):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, num_train_iter:int, num_val_iter:int, epochs:int, save_every:int,
+                 unpack_dataset: bool = True, device: torch.device = torch.device('cuda')):
         # From https://grugbrain.dev/. Worth a read ya big brains ;-)
 
         # apex predator of grug is complexity
@@ -147,9 +147,9 @@ class nnUNetTrainer(object):
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
         self.oversample_foreground_percent = 0.33
-        self.num_iterations_per_epoch = 250
-        self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 1000
+        self.num_iterations_per_epoch = num_train_iter
+        self.num_val_iterations_per_epoch = num_val_iter
+        self.num_epochs = epochs
         self.current_epoch = 0
         self.enable_deep_supervision = True
 
@@ -185,12 +185,25 @@ class nnUNetTrainer(object):
         # self.configure_rotation_dummyDA_mirroring_and_inital_patch_size and will be saved in checkpoints
 
         ### checkpoint saving stuff
-        self.save_every = 50
+        self.save_every = save_every
         self.disable_checkpointing = False
 
         ## DDP batch size and oversampling can differ between workers and needs adaptation
         # we need to change the batch size in DDP because we don't use any of those distributed samplers
         self._set_batch_size_and_oversample()
+
+        if self.current_epoch == 0:
+            self.logger.log_custom_stuff(
+                {
+                    "epochs": self.num_epochs,
+                    "num_iterations_per_epoch": self.num_iterations_per_epoch,
+                    "num_val_iterations_per_epoch": self.num_val_iterations_per_epoch,
+                    "batch_size": self.batch_size,
+                    "save_every": self.save_every
+                },
+                self.output_folder,
+                timestamp=datetime.now()
+            )
 
         self.was_initialized = False
 

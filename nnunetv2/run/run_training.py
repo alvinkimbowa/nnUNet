@@ -32,6 +32,10 @@ def find_free_network_port() -> int:
 def get_trainer_from_args(dataset_name_or_id: Union[int, str],
                           configuration: str,
                           fold: int,
+                          num_train_iter: int,
+                          num_val_iter: int,
+                          epochs: int,
+                          save_every: int,
                           trainer_name: str = 'nnUNetTrainer',
                           plans_identifier: str = 'nnUNetPlans',
                           use_compressed: bool = False,
@@ -64,7 +68,8 @@ def get_trainer_from_args(dataset_name_or_id: Union[int, str],
     plans = load_json(plans_file)
     dataset_json = load_json(join(preprocessed_dataset_folder_base, 'dataset.json'))
     nnunet_trainer = nnunet_trainer(plans=plans, configuration=configuration, fold=fold,
-                                    dataset_json=dataset_json, unpack_dataset=not use_compressed, device=device)
+                                    dataset_json=dataset_json, unpack_dataset=not use_compressed, device=device,
+                                    num_train_iter=num_train_iter, num_val_iter=num_val_iter, epochs=epochs, save_every=save_every)
     return nnunet_trainer
 
 
@@ -138,6 +143,8 @@ def run_ddp(rank, dataset_name_or_id, configuration, fold, tr, p, use_compressed
 
 def run_training(dataset_name_or_id: Union[str, int],
                  configuration: str, fold: Union[int, str],
+                 num_train_iter: int, num_val_iter: int,
+                 epochs: int, save_every: int,
                  trainer_class_name: str = 'nnUNetTrainer',
                  plans_identifier: str = 'nnUNetPlans',
                  pretrained_weights: Optional[str] = None,
@@ -193,8 +200,9 @@ def run_training(dataset_name_or_id: Union[str, int],
                  nprocs=num_gpus,
                  join=True)
     else:
-        nnunet_trainer = get_trainer_from_args(dataset_name_or_id, configuration, fold, trainer_class_name,
-                                               plans_identifier, use_compressed_data, device=device)
+        nnunet_trainer = get_trainer_from_args(dataset_name_or_id, configuration, fold,
+                                               num_train_iter, num_val_iter, epochs, save_every,
+                                               trainer_class_name, plans_identifier, use_compressed_data, device=device)
 
         if disable_checkpointing:
             nnunet_trainer.disable_checkpointing = disable_checkpointing
@@ -256,6 +264,15 @@ def run_training_entry():
                     help="Use this to set the device the training should run with. Available options are 'cuda' "
                          "(GPU), 'cpu' (CPU) and 'mps' (Apple M1/M2). Do NOT use this to set which GPU ID! "
                          "Use CUDA_VISIBLE_DEVICES=X nnUNetv2_train [...] instead!")
+    parser.add_argument('--num_train_iter', type=int, default=None, required=True,
+                        help='[REQUIRED] Number of images in the train set')
+    parser.add_argument('--num_val_iter', type=int, default=None, required=True,
+                        help='[REQUIRED] Number of images in the validation set')
+    parser.add_argument('-e', '--epochs', type=int, default=100, required=False,
+                        help='[OPTIONAL] Number of epochs to train for. Default: 100')
+    parser.add_argument('--save_every', type=int, default=1, required=False,
+                        help='[OPTIONAL] Save checkpoint every X epochs. Default: 1')
+    parser.add_argument
     args = parser.parse_args()
 
     assert args.device in ['cpu', 'cuda', 'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {args.device}.'
@@ -272,7 +289,7 @@ def run_training_entry():
     else:
         device = torch.device('mps')
 
-    run_training(args.dataset_name_or_id, args.configuration, args.fold, args.tr, args.p, args.pretrained_weights,
+    run_training(args.dataset_name_or_id, args.configuration, args.fold, args.num_train_iter, args.num_val_iter, args.epochs, args.save_every,args.tr, args.p, args.pretrained_weights,
                  args.num_gpus, args.use_compressed, args.npz, args.c, args.val, args.disable_checkpointing, args.val_best,
                  device=device)
 

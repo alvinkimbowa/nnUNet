@@ -101,3 +101,10 @@ class nnUNetLogger(object):
 
     def load_checkpoint(self, checkpoint: dict):
         self.my_fantastic_logging = checkpoint
+
+    def log_custom_stuff(self, key_values, output_folder, timestamp):
+        # Open existing log file and append new data or create one if it does not exist
+        with open(join(output_folder, 'custom.log'), 'a') as f:
+            f.write('\n')
+            for key, value in key_values.items():
+                f.write(f'{timestamp}: {key} => {value}\n')
