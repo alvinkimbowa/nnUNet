@@ -1,3 +1,5 @@
+import os
+import json
 import matplotlib
 from batchgenerators.utilities.file_and_folder_operations import join
 
@@ -108,3 +110,17 @@ class nnUNetLogger(object):
             f.write('\n')
             for key, value in key_values.items():
                 f.write(f'{timestamp}: {key} => {value}\n')
+
+    def log_monogenic_params(self, key_values, output_folder):
+        if not os.path.exists(join(output_folder, 'monogenic_params.json')):
+            with open(join(output_folder, 'monogenic_params.json'), 'w') as f:
+                json.dump([key_values], f, indent=4)
+                return
+
+        with open(join(output_folder, 'monogenic_params.json'), 'r') as f:
+            data = json.load(f)
+        
+        data.append([key_values])
+        with open(join(output_folder, 'monogenic_params.json'), 'w') as f:
+            json.dump(data, f, indent=4)
+            
