@@ -1142,6 +1142,7 @@ class nnUNetTrainer(object):
             self.logger.log_monogenic_params(
                 {
                     "sigma": self.network.encoder.stages[0][0].sigma.item(),
+                    "nscale": self.network.encoder.stages[0][0].nscale,
                     "wls": self.network.encoder.stages[0][0].wave_lengths.tolist(),
                     "return_rgb": self.network.encoder.stages[0][0].return_rgb,
                     "return_phase_orientation": self.network.encoder.stages[0][0].return_phase_orientation,
@@ -1180,6 +1181,7 @@ class nnUNetTrainer(object):
             {
                     "epoch": self.current_epoch,
                     "sigma": self.network.encoder.stages[0][0].sigma.item(),
+                    "nscale": self.network.encoder.stages[0][0].nscale,
                     "wls": self.network.encoder.stages[0][0].wave_lengths.tolist(),
                     "return_rgb": self.network.encoder.stages[0][0].return_rgb,
                     "return_phase_orientation": self.network.encoder.stages[0][0].return_phase_orientation,
