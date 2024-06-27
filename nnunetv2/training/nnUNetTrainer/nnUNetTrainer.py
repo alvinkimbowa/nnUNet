@@ -1138,18 +1138,13 @@ class nnUNetTrainer(object):
     def on_epoch_start(self):
         self.logger.log('epoch_start_timestamps', time(), self.current_epoch)
         
-        if self.current_epoch == 0: 
-            self.logger.log_monogenic_params(
-                {
-                    "sigma": self.network.encoder.stages[0][0].sigma.item(),
-                    "nscale": self.network.encoder.stages[0][0].nscale,
-                    "wls": self.network.encoder.stages[0][0].wave_lengths.tolist(),
-                    "return_rgb": self.network.encoder.stages[0][0].return_rgb,
-                    "return_phase_orientation": self.network.encoder.stages[0][0].return_phase_orientation,
-                    "return_hsv": self.network.encoder.stages[0][0].return_hsv,
-                },
-                self.output_folder,
-            )
+        if self.current_epoch == 0:
+            if type(self.network.encoder.stages[0][0]).__name__ == "Monogenic":
+                self.logger.log_monogenic_params(
+                    current_epoch=self.current_epoch,
+                    mono_layer=self.network.encoder.stages[0][0],
+                    output_folder=self.output_folder
+                )
 
     def on_epoch_end(self):
         self.logger.log('epoch_end_timestamps', time(), self.current_epoch)
@@ -1177,18 +1172,12 @@ class nnUNetTrainer(object):
 
         self.current_epoch += 1
 
-        self.logger.log_monogenic_params(
-            {
-                    "epoch": self.current_epoch,
-                    "sigma": self.network.encoder.stages[0][0].sigma.item(),
-                    "nscale": self.network.encoder.stages[0][0].nscale,
-                    "wls": self.network.encoder.stages[0][0].wave_lengths.tolist(),
-                    "return_rgb": self.network.encoder.stages[0][0].return_rgb,
-                    "return_phase_orientation": self.network.encoder.stages[0][0].return_phase_orientation,
-                    "return_hsv": self.network.encoder.stages[0][0].return_hsv,
-            },
-            self.output_folder
-        )
+        if type(self.network.encoder.stages[0][0]).__name__ == "Monogenic":
+            self.logger.log_monogenic_params(
+                current_epoch=self.current_epoch,
+                mono_layer=self.network.encoder.stages[0][0],
+                output_folder=self.output_folder
+            )
 
     def save_checkpoint(self, filename: str) -> None:
         if self.local_rank == 0:

@@ -1,5 +1,6 @@
 import os
 import json
+import torch
 import matplotlib
 from batchgenerators.utilities.file_and_folder_operations import join
 
@@ -111,7 +112,18 @@ class nnUNetLogger(object):
             for key, value in key_values.items():
                 f.write(f'{timestamp}: {key} => {value}\n')
 
-    def log_monogenic_params(self, key_values, output_folder):
+    def log_monogenic_params(self, current_epoch, mono_layer, output_folder):
+        key_values = {
+            "epoch": current_epoch,
+            "sigma": torch.nn.functional.sigmoid(mono_layer.sigma).item(),
+            "nscale": mono_layer.nscale,
+            "wls": mono_layer.wave_lengths.tolist(),
+            "return_rgb": mono_layer.return_rgb,
+            "return_phase_orientation": mono_layer.return_phase_orientation,
+            "return_hsv": mono_layer.return_hsv,
+            "trainable": mono_layer.trainable
+        }
+
         if not os.path.exists(join(output_folder, 'monogenic_params.json')):
             with open(join(output_folder, 'monogenic_params.json'), 'w') as f:
                 json.dump([key_values], f, indent=4)
