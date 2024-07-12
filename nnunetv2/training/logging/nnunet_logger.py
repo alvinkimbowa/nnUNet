@@ -115,13 +115,15 @@ class nnUNetLogger(object):
     def log_monogenic_params(self, current_epoch, mono_layer, output_folder):
         key_values = {
             "epoch": current_epoch,
-            "sigma": torch.nn.functional.sigmoid(mono_layer.sigma).item(),
             "nscale": mono_layer.nscale,
-            "wls": mono_layer.wave_lengths.tolist(),
+            "sigmaonf": torch.nn.functional.sigmoid(mono_layer.sigmaonf).item(),
+            "max_wl": mono_layer.max_wl,
+            # "mult": mono_layer.mult.item(),
+            "wls": mono_layer.rescale_wls(torch.nn.functional.sigmoid(mono_layer.wls)).tolist(),
             "return_rgb": mono_layer.return_rgb,
-            "return_phase_orientation": mono_layer.return_phase_orientation,
             "return_hsv": mono_layer.return_hsv,
-            "trainable": mono_layer.trainable
+            "trainable": mono_layer.trainable,
+            "return_phase_orientation": mono_layer.return_phase_orientation
         }
 
         if not os.path.exists(join(output_folder, 'monogenic_params.json')):
