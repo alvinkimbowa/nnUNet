@@ -123,7 +123,8 @@ class nnUNetLogger(object):
             "return_rgb": mono_layer.return_rgb,
             "return_hsv": mono_layer.return_hsv,
             "trainable": mono_layer.trainable,
-            "return_phase_orientation": mono_layer.return_phase_orientation
+            "return_phase_orientation": mono_layer.return_phase_orientation,
+            "return_input": mono_layer.return_input
         }
 
         if not os.path.exists(join(output_folder, 'monogenic_params.json')):
