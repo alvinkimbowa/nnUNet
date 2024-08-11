@@ -113,19 +113,8 @@ class nnUNetLogger(object):
                 f.write(f'{timestamp}: {key} => {value}\n')
 
     def log_monogenic_params(self, current_epoch, mono_layer, output_folder):
-        key_values = {
-            "epoch": current_epoch,
-            "nscale": mono_layer.nscale,
-            "sigmaonf": torch.nn.functional.sigmoid(mono_layer.sigmaonf).item(),
-            "max_wl": mono_layer.max_wl,
-            # "mult": mono_layer.mult.item(),
-            "wls": mono_layer.rescale_wls(torch.nn.functional.sigmoid(mono_layer.wls)).tolist(),
-            "return_rgb": mono_layer.return_rgb,
-            "return_hsv": mono_layer.return_hsv,
-            "trainable": mono_layer.trainable,
-            "return_phase_orientation": mono_layer.return_phase_orientation,
-            "return_input": mono_layer.return_input
-        }
+        key_values = mono_layer.get_params()
+        print(f'Logging monogenic layer parameters for epoch {current_epoch}: {key_values}')
 
         if not os.path.exists(join(output_folder, 'monogenic_params.json')):
             with open(join(output_folder, 'monogenic_params.json'), 'w') as f:

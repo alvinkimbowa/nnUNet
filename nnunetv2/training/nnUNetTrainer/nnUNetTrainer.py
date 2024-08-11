@@ -1172,7 +1172,7 @@ class nnUNetTrainer(object):
 
         self.current_epoch += 1
 
-        if type(self.network.encoder.stages[0][0]).__name__ == "Monogenic":
+        if type(self.network.encoder.stages[0][0]).__name__ in ["Monogenic", "PhaseAsymmono2D"]:
             self.logger.log_monogenic_params(
                 current_epoch=self.current_epoch,
                 mono_layer=self.network.encoder.stages[0][0],
