@@ -71,7 +71,7 @@ from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, num_train_iter:int, num_val_iter:int, epochs:int, save_every:int,
-                 unpack_dataset: bool = True, device: torch.device = torch.device('cuda')):
+                 model_name: str, mono: bool, unpack_dataset: bool = True, device: torch.device = torch.device('cuda')):
         # From https://grugbrain.dev/. Worth a read ya big brains ;-)
 
         # apex predator of grug is complexity
@@ -151,6 +151,8 @@ class nnUNetTrainer(object):
         self.num_val_iterations_per_epoch = num_val_iter
         self.num_epochs = epochs
         self.current_epoch = 0
+        self.model_name = model_name
+        self.mono = mono
         self.enable_deep_supervision = True
 
         ### Dealing with labels/regions
@@ -908,7 +910,7 @@ class nnUNetTrainer(object):
         if isinstance(mod, OptimizedModule):
             mod = mod._orig_mod
 
-        mod.decoder.deep_supervision = enabled
+        # mod.decoder.deep_supervision = enabled
 
     def on_train_start(self):
         # dataloaders must be instantiated here (instead of __init__) because they need access to the training data
@@ -1139,10 +1141,11 @@ class nnUNetTrainer(object):
         self.logger.log('epoch_start_timestamps', time(), self.current_epoch)
         
         if self.current_epoch == 0:
-            if type(self.network.encoder.stages[0][0]).__name__ == "Monogenic":
+            # if type(self.network.encoder.stages[0][0]).__name__ == "Monogenic":
+            if self.mono:
                 self.logger.log_monogenic_params(
                     current_epoch=self.current_epoch,
-                    mono_layer=self.network.encoder.stages[0][0],
+                    mono_layer=self.network.mono,
                     output_folder=self.output_folder
                 )
 
@@ -1172,10 +1175,11 @@ class nnUNetTrainer(object):
 
         self.current_epoch += 1
 
-        if type(self.network.encoder.stages[0][0]).__name__ in ["Monogenic", "PhaseAsymmono2D"]:
+        # if type(self.network.encoder.stages[0][0]).__name__ in ["Monogenic", "PhaseAsymmono2D"]:
+        if self.mono:
             self.logger.log_monogenic_params(
                 current_epoch=self.current_epoch,
-                mono_layer=self.network.encoder.stages[0][0],
+                mono_layer=self.network.mono,
                 output_folder=self.output_folder
             )
 

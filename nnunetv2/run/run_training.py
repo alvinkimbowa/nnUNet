@@ -36,6 +36,8 @@ def get_trainer_from_args(dataset_name_or_id: Union[int, str],
                           num_val_iter: int,
                           epochs: int,
                           save_every: int,
+                          model_name: str,
+                          mono: bool,
                           trainer_name: str = 'nnUNetTrainer',
                           plans_identifier: str = 'nnUNetPlans',
                           use_compressed: bool = False,
@@ -69,7 +71,8 @@ def get_trainer_from_args(dataset_name_or_id: Union[int, str],
     dataset_json = load_json(join(preprocessed_dataset_folder_base, 'dataset.json'))
     nnunet_trainer = nnunet_trainer(plans=plans, configuration=configuration, fold=fold,
                                     dataset_json=dataset_json, unpack_dataset=not use_compressed, device=device,
-                                    num_train_iter=num_train_iter, num_val_iter=num_val_iter, epochs=epochs, save_every=save_every)
+                                    num_train_iter=num_train_iter, num_val_iter=num_val_iter, epochs=epochs, save_every=save_every,
+                                    model_name=model_name, mono=mono)
     return nnunet_trainer
 
 
@@ -145,6 +148,8 @@ def run_training(dataset_name_or_id: Union[str, int],
                  configuration: str, fold: Union[int, str],
                  num_train_iter: int, num_val_iter: int,
                  epochs: int, save_every: int,
+                 model_name: str,
+                 mono: bool,
                  trainer_class_name: str = 'nnUNetTrainer',
                  plans_identifier: str = 'nnUNetPlans',
                  pretrained_weights: Optional[str] = None,
@@ -201,7 +206,7 @@ def run_training(dataset_name_or_id: Union[str, int],
                  join=True)
     else:
         nnunet_trainer = get_trainer_from_args(dataset_name_or_id, configuration, fold,
-                                               num_train_iter, num_val_iter, epochs, save_every,
+                                               num_train_iter, num_val_iter, epochs, save_every, model_name, mono,
                                                trainer_class_name, plans_identifier, use_compressed_data, device=device)
 
         if disable_checkpointing:
@@ -272,6 +277,10 @@ def run_training_entry():
                         help='[OPTIONAL] Number of epochs to train for. Default: 100')
     parser.add_argument('--save_every', type=int, default=1, required=False,
                         help='[OPTIONAL] Save checkpoint every X epochs. Default: 1')
+    parser.add_argument('--model_name', type=str, required=True,
+                        help='[OPTIONAL] Name of the model to train.')
+    parser.add_argument('--mono', action='store_true', required=False,
+                        help='[OPTIONAL] Use monogenic network architecture. Default: False')
     parser.add_argument
     args = parser.parse_args()
 
@@ -289,7 +298,8 @@ def run_training_entry():
     else:
         device = torch.device('mps')
 
-    run_training(args.dataset_name_or_id, args.configuration, args.fold, args.num_train_iter, args.num_val_iter, args.epochs, args.save_every,args.tr, args.p, args.pretrained_weights,
+    run_training(args.dataset_name_or_id, args.configuration, args.fold, args.num_train_iter, args.num_val_iter, args.epochs, args.save_every,
+                 args.model_name, args.mono, args.tr, args.p, args.pretrained_weights,
                  args.num_gpus, args.use_compressed, args.npz, args.c, args.val, args.disable_checkpointing, args.val_best,
                  device=device)
 
