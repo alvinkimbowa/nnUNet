@@ -276,7 +276,7 @@ def run_training_entry():
     parser.add_argument('--save_every', type=int, default=1, required=False,
                         help='[OPTIONAL] Save checkpoint every X epochs. Default: 1')
     parser.add_argument('--model_name', type=str, required=True,
-                        help='[OPTIONAL] Name of the model to train.')
+                        help='Name of the model to train.')
     parser.add_argument
     args = parser.parse_args()
 

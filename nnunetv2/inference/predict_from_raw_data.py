@@ -36,6 +36,7 @@ from nnunetv2.utilities.utils import create_lists_from_splitted_dataset_folder
 
 class nnUNetPredictor(object):
     def __init__(self,
+                 model_name: str,
                  tile_step_size: float = 0.5,
                  use_gaussian: bool = True,
                  use_mirroring: bool = True,
@@ -44,6 +45,7 @@ class nnUNetPredictor(object):
                  verbose: bool = False,
                  verbose_preprocessing: bool = False,
                  allow_tqdm: bool = True):
+        self.model_name = model_name
         self.verbose = verbose
         self.verbose_preprocessing = verbose_preprocessing
         self.allow_tqdm = allow_tqdm
@@ -99,14 +101,16 @@ class nnUNetPredictor(object):
         if trainer_class is None:
             raise RuntimeError(f'Unable to locate trainer class {trainer_name} in nnunetv2.training.nnUNetTrainer. '
                                f'Please place it there (in any .py file)!')
-        network = trainer_class.build_network_architecture(
-            configuration_manager.network_arch_class_name,
-            configuration_manager.network_arch_init_kwargs,
-            configuration_manager.network_arch_init_kwargs_req_import,
-            num_input_channels,
-            plans_manager.get_label_manager(dataset_json).num_segmentation_heads,
-            enable_deep_supervision=False
-        )
+        # network = trainer_class.build_network_architecture(
+        #     configuration_manager.network_arch_class_name,
+        #     configuration_manager.network_arch_init_kwargs,
+        #     configuration_manager.network_arch_init_kwargs_req_import,
+        #     num_input_channels,
+        #     plans_manager.get_label_manager(dataset_json).num_segmentation_heads,
+        #     enable_deep_supervision=False
+        # )
+
+        network = trainer_class.build_network_architecture(self.model_name, configuration_manager.patch_size)
 
         self.plans_manager = plans_manager
         self.configuration_manager = configuration_manager
@@ -816,6 +820,8 @@ def predict_entry_point():
     parser.add_argument('--disable_progress_bar', action='store_true', required=False, default=False,
                         help='Set this flag to disable progress bar. Recommended for HPC environments (non interactive '
                              'jobs)')
+    parser.add_argument('--model_name', type=str, required=True,
+                        help='Name of the model to train.')
 
     print(
         "\n#######################################################################\nPlease cite the following paper "
@@ -850,7 +856,8 @@ def predict_entry_point():
     else:
         device = torch.device('mps')
 
-    predictor = nnUNetPredictor(tile_step_size=args.step_size,
+    predictor = nnUNetPredictor(model_name=args.model_name,
+                                tile_step_size=args.step_size,
                                 use_gaussian=True,
                                 use_mirroring=not args.disable_tta,
                                 perform_everything_on_device=True,
