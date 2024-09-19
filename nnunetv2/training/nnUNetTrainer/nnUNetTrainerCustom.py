@@ -18,18 +18,16 @@ class nnUNetTrainerCustom(nnUNetTrainer):
         epochs: int,
         save_every: int,
         model_name: str,
-        mono: bool,
         unpack_dataset: bool = True,
         device: torch.device = torch.device("cuda"),
     ):
         super().__init__(plans, configuration, fold, dataset_json, num_train_iter, num_val_iter, epochs, save_every,
-                         model_name, mono, unpack_dataset, device
+                         model_name, unpack_dataset, device
                          )
         self.enable_deep_supervision = False
-        self.mono = mono
 
     @staticmethod
-    def build_network_architecture(model_name: str, mono: bool, patch_size) -> torch.nn.Module:
+    def build_network_architecture(model_name: str, patch_size) -> torch.nn.Module:
         """
         This is where you build the architecture according to the plans. There is no obligation to use
         get_network_from_plans, this is just a utility we use for the nnU-Net default architectures. You can do what
@@ -51,6 +49,13 @@ class nnUNetTrainerCustom(nnUNetTrainer):
         """
         
         print("model_name: ", model_name)
+        if "monogenic" in model_name:
+            model_name = model_name.replace("monogenic", "")
+            model_name = model_name.replace("_", "")
+            mono = True
+        else:
+            mono = False
+        
         if model_name == "UNETR":
             net = nets.UNETR(
                 img_size=patch_size,
@@ -99,7 +104,7 @@ class nnUNetTrainerCustom(nnUNetTrainer):
             self.num_input_channels = determine_num_input_channels(self.plans_manager, self.configuration_manager,
                                                                    self.dataset_json)
 
-            self.network = self.build_network_architecture(self.model_name, self.mono, self.configuration_manager.patch_size).to(self.device)
+            self.network = self.build_network_architecture(self.model_name, self.configuration_manager.patch_size).to(self.device)
             # compile network for free speedup
             if self._do_i_compile():
                 self.print_to_log_file('Using torch.compile...')
@@ -126,6 +131,7 @@ class MonoModel(torch.nn.Module):
         super(MonoModel, self).__init__()
         self.model = model
         self.mono = PhaseAsymmono2D(nscale=1, return_phase=True)
+        self.monogenic = True
     
     def forward(self, x):
         x = self.mono(x)
@@ -138,6 +144,7 @@ class OrigModel(torch.nn.Module):
         super(OrigModel, self).__init__()
         self.model = model
         self.model.apply(self.initialize)
+        self.monogenic = False
     
     def forward(self, x):
         x = self.model(x)

@@ -71,7 +71,7 @@ from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, num_train_iter:int, num_val_iter:int, epochs:int, save_every:int,
-                 model_name: str, mono: bool, unpack_dataset: bool = True, device: torch.device = torch.device('cuda')):
+                 model_name: str, unpack_dataset: bool = True, device: torch.device = torch.device('cuda')):
         # From https://grugbrain.dev/. Worth a read ya big brains ;-)
 
         # apex predator of grug is complexity
@@ -152,7 +152,6 @@ class nnUNetTrainer(object):
         self.num_epochs = epochs
         self.current_epoch = 0
         self.model_name = model_name
-        self.mono = mono
         self.enable_deep_supervision = True
 
         ### Dealing with labels/regions
@@ -1142,7 +1141,7 @@ class nnUNetTrainer(object):
         
         if self.current_epoch == 0:
             # if type(self.network.encoder.stages[0][0]).__name__ == "Monogenic":
-            if self.mono:
+            if self.network.monogenic:
                 self.logger.log_monogenic_params(
                     current_epoch=self.current_epoch,
                     mono_layer=self.network.mono,
@@ -1176,7 +1175,7 @@ class nnUNetTrainer(object):
         self.current_epoch += 1
 
         # if type(self.network.encoder.stages[0][0]).__name__ in ["Monogenic", "PhaseAsymmono2D"]:
-        if self.mono:
+        if self.network.monogenic:
             self.logger.log_monogenic_params(
                 current_epoch=self.current_epoch,
                 mono_layer=self.network.mono,
