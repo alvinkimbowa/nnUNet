@@ -485,7 +485,9 @@ class nnUNetPredictor(object):
 
             # messing with state dict names...
             if not isinstance(self.network, OptimizedModule):
-                self.network.load_state_dict(params)
+                with torch.inference_mode():
+                    self.network.load_state_dict(params)
+                # self.network.load_state_dict(params)
             else:
                 self.network._orig_mod.load_state_dict(params)
 
