@@ -96,7 +96,7 @@ class nnUNetTrainerCustom(nnUNetTrainer):
                 deep_supervision=False,
             )
         else:
-            raise ValueError(f"Unknown model name: {model_name}. Supported models are: UNETR, UNetplusplus, UNet, SegResNet, SwinUNETR")
+            raise ValueError(f"Unknown model name: {model_name}. Supported models are: UNETR, UNetplusplus, UNet, SegResNet, SwinUNETR and UNext.")
 
         net = OrigModel(net)
         
