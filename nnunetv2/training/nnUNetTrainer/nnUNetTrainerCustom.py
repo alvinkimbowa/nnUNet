@@ -4,6 +4,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot, determine_num_input_channels
 from dynamic_network_architectures.building_blocks.phase_asymmono import PhaseAsymmono2D
+from dynamic_network_architectures.building_blocks.unext_archs import UNext
 from dynamic_network_architectures.initialization.weight_init import InitWeights_He
 
 class nnUNetTrainerCustom(nnUNetTrainer):
@@ -87,6 +88,12 @@ class nnUNetTrainerCustom(nnUNetTrainer):
                 spatial_dims=2,
                 in_channels=1,
                 out_channels=2,
+            )
+        elif model_name == "UNext":
+            net = UNext(
+                input_channenuls=1,
+                num_classes=2,
+                deep_supervision=False,
             )
         else:
             raise ValueError(f"Unknown model name: {model_name}. Supported models are: UNETR, UNetplusplus, UNet, SegResNet, SwinUNETR")

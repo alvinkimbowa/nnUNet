@@ -1261,7 +1261,7 @@ class nnUNetTrainer(object):
 
         predictor = nnUNetPredictor(tile_step_size=0.5, use_gaussian=True, use_mirroring=True,
                                     perform_everything_on_device=True, device=self.device, verbose=False,
-                                    verbose_preprocessing=False, allow_tqdm=False)
+                                    verbose_preprocessing=False, allow_tqdm=False, model_name=self.model_name)
         predictor.manual_initialization(self.network, self.plans_manager, self.configuration_manager, None,
                                         self.dataset_json, self.__class__.__name__,
                                         self.inference_allowed_mirroring_axes)
