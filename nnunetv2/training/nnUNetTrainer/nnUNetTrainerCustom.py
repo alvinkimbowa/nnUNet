@@ -62,7 +62,7 @@ class nnUNetTrainerCustom(nnUNetTrainer):
             return_phase = arch_init_kwargs["return_phase"]
             return_phase_asym = arch_init_kwargs["return_phase_asym"]
             trainable = arch_init_kwargs["trainable"]
-            monogenic_kwargs = ["nscale", "return_phase", "return_phase_asym", "trainable"]
+            monogenic_kwargs = ["nscale", "return_phase", "return_phase_asym", "return_input", "return_ori", "trainable"]
             arch_init_kwargs = {k:v for k,v in arch_init_kwargs.items() if k not in monogenic_kwargs}
         else:
             mono = False
