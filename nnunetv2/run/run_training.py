@@ -32,8 +32,6 @@ def find_free_network_port() -> int:
 def get_trainer_from_args(dataset_name_or_id: Union[int, str],
                           configuration: str,
                           fold: int,
-                          num_train_iter: int,
-                          num_val_iter: int,
                           epochs: int,
                           save_every: int,
                           model_name: str,
@@ -70,7 +68,7 @@ def get_trainer_from_args(dataset_name_or_id: Union[int, str],
     dataset_json = load_json(join(preprocessed_dataset_folder_base, 'dataset.json'))
     nnunet_trainer = nnunet_trainer(plans=plans, configuration=configuration, fold=fold,
                                     dataset_json=dataset_json, unpack_dataset=not use_compressed, device=device,
-                                    num_train_iter=num_train_iter, num_val_iter=num_val_iter, epochs=epochs, save_every=save_every,
+                                    epochs=epochs, save_every=save_every,
                                     model_name=model_name)
     return nnunet_trainer
 
@@ -145,7 +143,6 @@ def run_ddp(rank, dataset_name_or_id, configuration, fold, tr, p, use_compressed
 
 def run_training(dataset_name_or_id: Union[str, int],
                  configuration: str, fold: Union[int, str],
-                 num_train_iter: int, num_val_iter: int,
                  epochs: int, save_every: int,
                  model_name: str,
                  trainer_class_name: str = 'nnUNetTrainer',
@@ -204,7 +201,7 @@ def run_training(dataset_name_or_id: Union[str, int],
                  join=True)
     else:
         nnunet_trainer = get_trainer_from_args(dataset_name_or_id, configuration, fold,
-                                               num_train_iter, num_val_iter, epochs, save_every, model_name,
+                                               epochs, save_every, model_name,
                                                trainer_class_name, plans_identifier, use_compressed_data, device=device)
 
         if disable_checkpointing:
@@ -267,10 +264,6 @@ def run_training_entry():
                     help="Use this to set the device the training should run with. Available options are 'cuda' "
                          "(GPU), 'cpu' (CPU) and 'mps' (Apple M1/M2). Do NOT use this to set which GPU ID! "
                          "Use CUDA_VISIBLE_DEVICES=X nnUNetv2_train [...] instead!")
-    parser.add_argument('--num_train_iter', type=int, default=None, required=True,
-                        help='[REQUIRED] Number of images in the train set')
-    parser.add_argument('--num_val_iter', type=int, default=None, required=True,
-                        help='[REQUIRED] Number of images in the validation set')
     parser.add_argument('-e', '--epochs', type=int, default=100, required=False,
                         help='[OPTIONAL] Number of epochs to train for. Default: 100')
     parser.add_argument('--save_every', type=int, default=1, required=False,
@@ -294,7 +287,7 @@ def run_training_entry():
     else:
         device = torch.device('mps')
 
-    run_training(args.dataset_name_or_id, args.configuration, args.fold, args.num_train_iter, args.num_val_iter, args.epochs, args.save_every,
+    run_training(args.dataset_name_or_id, args.configuration, args.fold, args.epochs, args.save_every,
                  args.model_name, args.tr, args.p, args.pretrained_weights,
                  args.num_gpus, args.use_compressed, args.npz, args.c, args.val, args.disable_checkpointing, args.val_best,
                  device=device)

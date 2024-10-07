@@ -1,11 +1,12 @@
 import monai.networks.nets as nets
 import torch
+from mono2D import Mono2D
 from torch.nn.parallel import DistributedDataParallel as DDP
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot, determine_num_input_channels
-from dynamic_network_architectures.building_blocks.phase_asymmono import PhaseAsymmono2D
-from dynamic_network_architectures.building_blocks.unext_archs import UNext
 from dynamic_network_architectures.initialization.weight_init import InitWeights_He
+from nnunetv2.utilities.get_network_from_plans import get_network_from_plans
+from typing import Tuple, Union, List
 
 class nnUNetTrainerCustom(nnUNetTrainer):
     def __init__(
@@ -14,21 +15,25 @@ class nnUNetTrainerCustom(nnUNetTrainer):
         configuration: str,
         fold: int,
         dataset_json: dict,
-        num_train_iter: int,
-        num_val_iter: int,
         epochs: int,
         save_every: int,
         model_name: str,
         unpack_dataset: bool = True,
         device: torch.device = torch.device("cuda"),
     ):
-        super().__init__(plans, configuration, fold, dataset_json, num_train_iter, num_val_iter, epochs, save_every,
+        super().__init__(plans, configuration, fold, dataset_json, epochs, save_every,
                          model_name, unpack_dataset, device
                          )
         self.enable_deep_supervision = False
 
     @staticmethod
-    def build_network_architecture(model_name: str, patch_size) -> torch.nn.Module:
+    def build_network_architecture(model_name: str, patch_size,
+                                   architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   enable_deep_supervision: bool = True) -> torch.nn.Module:
         """
         This is where you build the architecture according to the plans. There is no obligation to use
         get_network_from_plans, this is just a utility we use for the nnU-Net default architectures. You can do what
@@ -49,59 +54,71 @@ class nnUNetTrainerCustom(nnUNetTrainer):
 
         """
         
-        print("model_name: ", model_name)
         if "monogenic" in model_name:
             model_name = model_name.replace("monogenic", "")
             model_name = model_name.replace("_", "")
             mono = True
+            nscale = arch_init_kwargs["nscale"]
+            return_phase = arch_init_kwargs["return_phase"]
+            return_phase_asym = arch_init_kwargs["return_phase_asym"]
+            trainable = arch_init_kwargs["trainable"]
+            monogenic_kwargs = ["nscale", "return_phase", "return_phase_asym", "trainable"]
+            arch_init_kwargs = {k:v for k,v in arch_init_kwargs.items() if k not in monogenic_kwargs}
         else:
             mono = False
         
-        if model_name == "UNETR":
+        if model_name == "nnunet":
+            net = get_network_from_plans(
+                architecture_class_name,
+                arch_init_kwargs,
+                arch_init_kwargs_req_import,
+                num_input_channels,
+                num_output_channels,
+                allow_init=True,
+                deep_supervision=enable_deep_supervision
+            )
+        elif model_name == "UNETR":
             net = nets.UNETR(
                 img_size=patch_size,
                 spatial_dims=2,
-                in_channels=1,
-                out_channels=2,
+                in_channels=num_input_channels,
+                out_channels=num_output_channels,
             )
         elif model_name == "UNetplusplus":
             net = nets.BasicUNetPlusPlus(
                 spatial_dims=2,
-                in_channels=1,
-                out_channels=2,
+                in_channels=num_input_channels,
+                out_channels=num_output_channels,
             )
         elif model_name == "UNet":
             net = nets.UNet(
                 spatial_dims=2,
-                in_channels=1,
-                out_channels=2,
+                in_channels=num_input_channels,
+                out_channels=num_output_channels,
             )
         elif model_name == "SegResNet":
             net = nets.SegResNet(
                 spatial_dims=2,
-                in_channels=1,
-                out_channels=2,
+                in_channels=num_input_channels,
+                out_channels=num_output_channels,
             )
         elif model_name == "SwinUNETR":
             net = nets.SwinUNETR(
                 img_size=patch_size,
                 spatial_dims=2,
-                in_channels=1,
-                out_channels=2,
-            )
-        elif model_name == "UNext":
-            net = UNext(
-                input_channenuls=1,
-                num_classes=2,
-                deep_supervision=False,
+                in_channels=num_input_channels,
+                out_channels=num_output_channels,
             )
         else:
-            raise ValueError(f"Unknown model name: {model_name}. Supported models are: UNETR, UNetplusplus, UNet, SegResNet, SwinUNETR and UNext.")
+            raise ValueError(f"Unknown model name: {model_name}. Supported models are: nnunet, UNETR, UNetplusplus, UNet, SegResNet, and SwinUNETR.")
 
-        net = OrigModel(net)
+        if model_name == "nnunet":
+            net.monogenic = False
+        else:
+            net = OrigModel(net)
         
         if mono:
-            return MonoModel(net)
+            return MonoModel(net, nscale, return_phase, return_phase_asym, trainable)
         else:
             return net
 
@@ -111,7 +128,15 @@ class nnUNetTrainerCustom(nnUNetTrainer):
             self.num_input_channels = determine_num_input_channels(self.plans_manager, self.configuration_manager,
                                                                    self.dataset_json)
 
-            self.network = self.build_network_architecture(self.model_name, self.configuration_manager.patch_size).to(self.device)
+            self.network = self.build_network_architecture(
+                self.model_name,
+                self.configuration_manager.patch_size,
+                self.configuration_manager.network_arch_class_name,
+                self.configuration_manager.network_arch_init_kwargs,
+                self.configuration_manager.network_arch_init_kwargs_req_import,
+                self.num_input_channels,
+                self.label_manager.num_segmentation_heads,
+                self.enable_deep_supervision).to(self.device)
             # compile network for free speedup
             if self._do_i_compile():
                 self.print_to_log_file('Using torch.compile...')
@@ -134,10 +159,10 @@ class nnUNetTrainerCustom(nnUNetTrainer):
         
 
 class MonoModel(torch.nn.Module):
-    def __init__(self, model):
+    def __init__(self, model, nscale=1, return_phase=True, return_phase_asym=False, trainable=True):
         super(MonoModel, self).__init__()
         self.model = model
-        self.mono = PhaseAsymmono2D(nscale=1, return_phase=True)
+        self.mono = Mono2D(nscale=nscale, return_phase=return_phase, return_phase_asym=return_phase_asym, trainable=trainable)
         self.monogenic = True
     
     def forward(self, x):

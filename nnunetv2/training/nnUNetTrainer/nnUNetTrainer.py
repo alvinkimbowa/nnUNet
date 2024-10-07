@@ -70,7 +70,7 @@ from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 
 
 class nnUNetTrainer(object):
-    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, num_train_iter:int, num_val_iter:int, epochs:int, save_every:int,
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, epochs:int, save_every:int,
                  model_name: str, unpack_dataset: bool = True, device: torch.device = torch.device('cuda')):
         # From https://grugbrain.dev/. Worth a read ya big brains ;-)
 
@@ -143,12 +143,24 @@ class nnUNetTrainer(object):
                  self.configuration_manager.previous_stage_name, 'predicted_next_stage', self.configuration_name) \
                 if self.is_cascaded else None
 
+        ### Simple logging. Don't take that away from me!
+        # initialize log file. This is just our log for the print statements etc. Not to be confused with lightning
+        # logging
+        timestamp = datetime.now()
+        maybe_mkdir_p(self.output_folder)
+        self.log_file = join(self.output_folder, "training_log_%d_%d_%d_%02.0d_%02.0d_%02.0d.txt" %
+                             (timestamp.year, timestamp.month, timestamp.day, timestamp.hour, timestamp.minute,
+                              timestamp.second))
+        self.logger = nnUNetLogger()
+        
         ### Some hyperparameters for you to fiddle with
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
         self.oversample_foreground_percent = 0.33
-        self.num_iterations_per_epoch = num_train_iter
-        self.num_val_iterations_per_epoch = num_val_iter
+        batch_size = self.configuration_manager.configuration['batch_size']
+        tr_keys, val_keys = self.do_split()
+        self.num_iterations_per_epoch = len(tr_keys) // batch_size
+        self.num_val_iterations_per_epoch = len(val_keys) // batch_size
         self.num_epochs = epochs
         self.current_epoch = 0
         self.model_name = model_name
@@ -165,15 +177,6 @@ class nnUNetTrainer(object):
         self.grad_scaler = GradScaler() if self.device.type == 'cuda' else None
         self.loss = None  # -> self.initialize
 
-        ### Simple logging. Don't take that away from me!
-        # initialize log file. This is just our log for the print statements etc. Not to be confused with lightning
-        # logging
-        timestamp = datetime.now()
-        maybe_mkdir_p(self.output_folder)
-        self.log_file = join(self.output_folder, "training_log_%d_%d_%d_%02.0d_%02.0d_%02.0d.txt" %
-                             (timestamp.year, timestamp.month, timestamp.day, timestamp.hour, timestamp.minute,
-                              timestamp.second))
-        self.logger = nnUNetLogger()
 
         ### placeholders
         self.dataloader_train = self.dataloader_val = None  # see on_train_start
