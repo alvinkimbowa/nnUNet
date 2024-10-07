@@ -110,7 +110,15 @@ class nnUNetPredictor(object):
         #     enable_deep_supervision=False
         # )
 
-        network = trainer_class.build_network_architecture(self.model_name, configuration_manager.patch_size)
+        network = trainer_class.build_network_architecture(
+            self.model_name,
+            self.configuration_manager.patch_size,
+            self.configuration_manager.network_arch_class_name,
+            self.configuration_manager.network_arch_init_kwargs,
+            self.configuration_manager.network_arch_init_kwargs_req_import,
+            self.num_input_channels,
+            self.label_manager.num_segmentation_heads,
+            self.enable_deep_supervision).to(self.device)
 
         self.plans_manager = plans_manager
         self.configuration_manager = configuration_manager

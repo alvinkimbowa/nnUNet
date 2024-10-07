@@ -27,7 +27,8 @@ class nnUNetTrainerCustom(nnUNetTrainer):
         self.enable_deep_supervision = False
 
     @staticmethod
-    def build_network_architecture(model_name: str, patch_size,
+    def build_network_architecture(model_name: str,
+                                   patch_size,
                                    architecture_class_name: str,
                                    arch_init_kwargs: dict,
                                    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
