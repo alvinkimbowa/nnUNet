@@ -3,7 +3,7 @@ from nnunetv2.training.loss.dice import SoftDiceLoss, MemoryEfficientSoftDiceLos
 from nnunetv2.training.loss.robust_ce_loss import RobustCrossEntropyLoss, TopKLoss
 from nnunetv2.utilities.helpers import softmax_helper_dim1
 from torch import nn
-
+import torch.nn.functional as F
 
 class DC_and_CE_loss(nn.Module):
     def __init__(self, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, ignore_label=None,
@@ -54,6 +54,60 @@ class DC_and_CE_loss(nn.Module):
 
         result = self.weight_ce * ce_loss + self.weight_dice * dc_loss
         return result
+
+
+class DC_and_CE_and_Edge_loss(DC_and_CE_loss):
+    def __init__(self, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, weight_edge=0.1, ignore_label=None,
+                 dice_class=SoftDiceLoss):
+        super(DC_and_CE_and_Edge_loss, self).__init__(soft_dice_kwargs, ce_kwargs, weight_ce, weight_dice, ignore_label, dice_class)
+        self.weight_edge = weight_edge
+        self.bce = nn.BCELoss()  # used in edge loss
+
+    def forward(self, net_output: torch.Tensor, target: torch.Tensor):
+        dc_ce_loss = super().forward(net_output, target)
+        edge_loss = self.get_edge_loss(net_output, target)
+        return dc_ce_loss + self.weight_edge * edge_loss
+    
+    def get_edge_loss(self, net_output: torch.Tensor, target: torch.Tensor):
+        """
+        net_output: (B, C, H, W)
+        target: (B, 1, H, W) - long (class indices)
+        """
+        C = net_output.shape[1]
+        total_edge_loss = 0.0
+        num_classes = C
+        eps = 1e-7
+
+        for cls in range(1, num_classes):  # skip background class 0
+            # Soft prediction for class `cls`
+            probs = F.softmax(net_output, dim=1)  # (B, C, H, W)
+            probs = probs[:, cls:cls+1]  # (B, 1, H, W)
+            gt_mask = (target == cls).float()  # (B, 1, H, W)
+
+            with torch.no_grad():
+                gt_edge = self.get_edge_from_mask(gt_mask)
+
+            # Class imbalance weighting
+            num_non_edge = (gt_edge == 0).sum().float()
+            num_edge = (gt_edge == 1).sum().float()
+            beta = num_non_edge / (num_edge + num_non_edge + eps)
+
+            probs = torch.clamp(probs, eps, 1 - eps)
+            loss = - beta * gt_edge * torch.log(probs) - (1 - beta) * (1 - gt_edge) * torch.log(1 - probs)
+            total_edge_loss += loss.mean()
+
+        return total_edge_loss / (num_classes - 1)  # average over foreground classes
+    
+    def get_edge_from_mask(self, mask: torch.Tensor):
+        """
+        Simple Sobel-style boundary detection.
+        Input: binary mask (B, 1, H, W)
+        Output: binary edge mask (B, 1, H, W)
+        """
+        edge_x = F.pad(mask[:, :, :, 1:] - mask[:, :, :, :-1], (0, 1), mode='constant', value=0)
+        edge_y = F.pad(mask[:, :, 1:, :] - mask[:, :, :-1, :], (0, 0, 0, 1), mode='constant', value=0)
+        edge = (edge_x.abs() + edge_y.abs()).clamp(0, 1)
+        return edge
 
 
 class DC_and_BCE_loss(nn.Module):
