@@ -9,13 +9,11 @@ import numpy as np
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
 
-class nnUNetTrainer_CustomSplits(nnUNetTrainer):
+class nnUNetTrainer_XPercentSplit(nnUNetTrainer):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         """used for debugging plans etc"""
         super().__init__(plans, configuration, fold, dataset_json, device)
-        self.custom_train_split = float(os.getenv('train_split'))
-        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
 
     def do_split(self):
         """
@@ -64,3 +62,74 @@ class nnUNetTrainer_CustomSplits(nnUNetTrainer):
             self.print_to_log_file('WARNING: Some validation cases are also in the training set. Please check the '
                                     'splits.json or ignore if this is intentional.')
         return tr_keys, val_keys
+
+
+class nnUNetTrainer_5PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.05
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_10PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.1
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_20PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.2
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_30PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.3
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_40PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.4
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_50PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.5
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_60PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.6
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_70PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.7
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_80PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.8
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
+
+class nnUNetTrainer_90PercentSplit(nnUNetTrainer_XPercentSplit):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.custom_train_split = 0.9
+        self.num_iterations_per_epoch = int(self.num_iterations_per_epoch * self.custom_train_split)
