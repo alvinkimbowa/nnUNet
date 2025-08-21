@@ -358,7 +358,7 @@ class nnUNetPredictor(object):
         with multiprocessing.get_context("spawn").Pool(num_processes_segmentation_export) as export_pool:
             worker_list = [i for i in export_pool._pool]
             r = []
-            for preprocessed in data_iterator:
+            for preprocessed in tqdm(data_iterator, desc="Predicting", total=len(self.list_of_lists_or_source_folder)):
                 data = preprocessed['data']
                 if isinstance(data, str):
                     delfile = data
