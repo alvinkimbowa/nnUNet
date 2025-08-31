@@ -1,7 +1,7 @@
 from typing import Union, Tuple, List
 from torch import nn
 
-from nnunetv2.training.nnUNetTrainer.variants.network_architecture.unext.archs import UNext_S
+from nnunetv2.training.nnUNetTrainer.variants.network_architecture.unext.archs import UNext
 from nnunetv2.training.nnUNetTrainer.variants.network_architecture.UNeXtTrainer import UNeXtTrainer
 
 
@@ -12,11 +12,13 @@ class UNeXtTrainer_S(UNeXtTrainer):
                                    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
                                    num_input_channels: int,
                                    num_output_channels: int,
+                                   patch_size: List[int],
                                    enable_deep_supervision: bool = True) -> nn.Module:
-
         
-        return UNext_S(
+        return UNext(
             num_classes=num_output_channels,
             input_channels=num_input_channels,
             deep_supervision=enable_deep_supervision,
+            embed_dims=[8, 16, 32, 64, 128],
+            img_size=patch_size[0]
         )
