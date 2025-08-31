@@ -198,6 +198,8 @@ class UNext(nn.Module):
                  depths=[1, 1, 1], sr_ratios=[8, 4, 2, 1], **kwargs):
         super().__init__()
         
+        self.deep_supervision = deep_supervision
+        
         self.encoder1 = nn.Conv2d(input_channels, 16, 3, stride=1, padding=1)
         self.encoder2 = nn.Conv2d(16, 32, 3, stride=1, padding=1)  
         self.encoder3 = nn.Conv2d(32, 128, 3, stride=1, padding=1)
@@ -250,7 +252,11 @@ class UNext(nn.Module):
         self.dbn3 = nn.BatchNorm2d(32)
         self.dbn4 = nn.BatchNorm2d(16)
         
-        self.final = nn.Conv2d(16, num_classes, kernel_size=1)
+        self.seg1 = nn.Conv2d(160, num_classes, kernel_size=1)
+        self.seg2 = nn.Conv2d(128, num_classes, kernel_size=1)
+        self.seg3 = nn.Conv2d(32, num_classes, kernel_size=1)
+        self.seg4 = nn.Conv2d(16, num_classes, kernel_size=1)
+        self.seg5 = nn.Conv2d(16, num_classes, kernel_size=1)
 
         self.soft = nn.Softmax(dim =1)
 
@@ -291,35 +297,43 @@ class UNext(nn.Module):
         ### Stage 4
 
         out = F.relu(F.interpolate(self.dbn1(self.decoder1(out)),scale_factor=(2,2),mode ='bilinear'))
-        
         out = torch.add(out,t4)
         _,_,H,W = out.shape
         out = out.flatten(2).transpose(1,2)
         for i, blk in enumerate(self.dblock1):
             out = blk(out, H, W)
+        out = self.dnorm3(out)
+        out = out.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        seg1 = self.seg1(out)
 
         ### Stage 3
         
-        out = self.dnorm3(out)
-        out = out.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
         out = F.relu(F.interpolate(self.dbn2(self.decoder2(out)),scale_factor=(2,2),mode ='bilinear'))
         out = torch.add(out,t3)
         _,_,H,W = out.shape
         out = out.flatten(2).transpose(1,2)
-        
         for i, blk in enumerate(self.dblock2):
             out = blk(out, H, W)
-
         out = self.dnorm4(out)
         out = out.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        seg2 = self.seg2(out)
+
 
         out = F.relu(F.interpolate(self.dbn3(self.decoder3(out)),scale_factor=(2,2),mode ='bilinear'))
+        seg3 = self.seg3(out)
+        
         out = torch.add(out,t2)
         out = F.relu(F.interpolate(self.dbn4(self.decoder4(out)),scale_factor=(2,2),mode ='bilinear'))
+        seg4 = self.seg4(out)
+        
         out = torch.add(out,t1)
         out = F.relu(F.interpolate(self.decoder5(out),scale_factor=(2,2),mode ='bilinear'))
+        seg5 =  self.seg5(out)
 
-        return self.final(out)
+        if self.deep_supervision:
+            return [seg5, seg4, seg3, seg2, seg1]
+        else:
+            return seg5
 
 
 class UNext_S(nn.Module):
@@ -331,6 +345,8 @@ class UNext_S(nn.Module):
                  attn_drop_rate=0., drop_path_rate=0., norm_layer=nn.LayerNorm,
                  depths=[1, 1, 1], sr_ratios=[8, 4, 2, 1], **kwargs):
         super().__init__()
+        
+        self.deep_supervision = deep_supervision
         
         self.encoder1 = nn.Conv2d(input_channels, 8, 3, stride=1, padding=1)  
         self.encoder2 = nn.Conv2d(8, 16, 3, stride=1, padding=1)  
@@ -384,7 +400,11 @@ class UNext_S(nn.Module):
         self.dbn3 = nn.BatchNorm2d(16)
         self.dbn4 = nn.BatchNorm2d(8)
         
-        self.final = nn.Conv2d(8, num_classes, kernel_size=1)
+        self.seg1 = nn.Conv2d(64, num_classes, kernel_size=1)
+        self.seg2 = nn.Conv2d(32, num_classes, kernel_size=1)
+        self.seg3 = nn.Conv2d(16, num_classes, kernel_size=1)
+        self.seg4 = nn.Conv2d(8, num_classes, kernel_size=1)
+        self.seg5 = nn.Conv2d(8, num_classes, kernel_size=1)
 
         self.soft = nn.Softmax(dim =1)
 
@@ -425,32 +445,40 @@ class UNext_S(nn.Module):
         ### Stage 4
 
         out = F.relu(F.interpolate(self.dbn1(self.decoder1(out)),scale_factor=(2,2),mode ='bilinear'))
-        
         out = torch.add(out,t4)
         _,_,H,W = out.shape
         out = out.flatten(2).transpose(1,2)
         for i, blk in enumerate(self.dblock1):
             out = blk(out, H, W)
+        out = self.dnorm3(out)
+        out = out.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        seg1 = self.seg1(out)
 
         ### Stage 3
         
-        out = self.dnorm3(out)
-        out = out.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
         out = F.relu(F.interpolate(self.dbn2(self.decoder2(out)),scale_factor=(2,2),mode ='bilinear'))
         out = torch.add(out,t3)
         _,_,H,W = out.shape
         out = out.flatten(2).transpose(1,2)
-        
         for i, blk in enumerate(self.dblock2):
             out = blk(out, H, W)
-
         out = self.dnorm4(out)
         out = out.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        seg2 = self.seg2(out)
+        
 
         out = F.relu(F.interpolate(self.dbn3(self.decoder3(out)),scale_factor=(2,2),mode ='bilinear'))
+        seg3 = self.seg3(out)
+
         out = torch.add(out,t2)
         out = F.relu(F.interpolate(self.dbn4(self.decoder4(out)),scale_factor=(2,2),mode ='bilinear'))
+        seg4 = self.seg4(out)
+        
         out = torch.add(out,t1)
         out = F.relu(F.interpolate(self.decoder5(out),scale_factor=(2,2),mode ='bilinear'))
+        seg5 = self.seg5(out)
 
-        return self.final(out)
+        if self.deep_supervision:
+            return [seg5, seg4, seg3, seg2, seg1]
+        else:
+            return seg5
