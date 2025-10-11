@@ -43,7 +43,6 @@ class AttentionUNetTrainer(nnUNetTrainerNoDeepSupervision):
                                    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
                                    num_input_channels: int,
                                    num_output_channels: int,
-                                   patch_size: List[int],
                                    enable_deep_supervision: bool = True) -> nn.Module:
 
         return nets.AttentionUnet(
@@ -72,7 +71,6 @@ class UNetPlusPlusTrainer(nnUNetTrainerNoDeepSupervision):
                                    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
                                    num_input_channels: int,
                                    num_output_channels: int,
-                                   patch_size: List[int],
                                    enable_deep_supervision: bool = True) -> nn.Module:
 
         return nets.BasicUNetPlusPlus(
@@ -193,7 +191,6 @@ class SegResNetTrainer(nnUNetTrainerNoDeepSupervision):
                                    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
                                    num_input_channels: int,
                                    num_output_channels: int,
-                                   patch_size: List[int],
                                    enable_deep_supervision: bool = True) -> nn.Module:
 
         return nets.SegResNet(
@@ -228,7 +225,6 @@ class SwinUNETRTrainer(nnUNetTrainerNoDeepSupervision):
                                    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
                                    num_input_channels: int,
                                    num_output_channels: int,
-                                   patch_size: List[int],
                                    enable_deep_supervision: bool = True) -> nn.Module:
 
         return nets.SwinUNETR(
