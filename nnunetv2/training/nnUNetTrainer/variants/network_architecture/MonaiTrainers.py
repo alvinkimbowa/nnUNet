@@ -57,17 +57,7 @@ class AttentionUNetTrainer(nnUNetTrainerNoDeepSupervision):
         )
 
 
-class UNetPlusPlusTrainer(nnUNetTrainerNoDeepSupervision):
-    def __init__(self,
-        plans: dict,
-        configuration: str,
-        fold: int,
-        dataset_json: dict,
-        device: torch.device = torch.device("cuda"),
-    ):
-        super().__init__(plans, configuration, fold, dataset_json, device)
-        self.enable_deep_supervision = True
-    
+class UNetPlusPlusTrainerNoDeepSupervision(nnUNetTrainerNoDeepSupervision):
     @staticmethod
     def build_network_architecture(architecture_class_name: str,
                                    arch_init_kwargs: dict,
@@ -103,6 +93,8 @@ class UNetPlusPlusTrainer(nnUNetTrainerNoDeepSupervision):
             # del data
             if self.enable_deep_supervision:
                 target = [target[0] for _ in range(len(output))]
+            else:
+                output = output[0]
             l = self.loss(output, target)
 
         if self.grad_scaler is not None:
@@ -136,6 +128,8 @@ class UNetPlusPlusTrainer(nnUNetTrainerNoDeepSupervision):
             del data
             if self.enable_deep_supervision:
                 target = [target[0] for _ in range(len(output))]
+            else:
+                output = output[0]
             l = self.loss(output, target)
 
         # we only need the output with the highest output resolution (if DS enabled)
@@ -185,6 +179,18 @@ class UNetPlusPlusTrainer(nnUNetTrainerNoDeepSupervision):
             fn_hard = fn_hard[1:]
 
         return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard}
+
+
+class UNetPlusPlusTrainer(UNetPlusPlusTrainerNoDeepSupervision):
+    def __init__(self,
+        plans: dict,
+        configuration: str,
+        fold: int,
+        dataset_json: dict,
+        device: torch.device = torch.device("cuda"),
+    ):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.enable_deep_supervision = True
 
 
 class SegResNetTrainer(nnUNetTrainerNoDeepSupervision):
