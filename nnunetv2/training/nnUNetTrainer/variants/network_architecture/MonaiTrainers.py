@@ -208,6 +208,73 @@ class SegResNetTrainer(nnUNetTrainerNoDeepSupervision):
             out_channels=num_output_channels,
         )
 
+class SegResNetTiny1Trainer(nnUNetTrainerNoDeepSupervision):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return nets.SegResNet(
+            spatial_dims=2,
+            in_channels=num_input_channels,
+            out_channels=num_output_channels,
+            init_filters=1,
+        )
+
+
+class SegResNetTiny2Trainer(nnUNetTrainerNoDeepSupervision):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return nets.SegResNet(
+            spatial_dims=2,
+            in_channels=num_input_channels,
+            out_channels=num_output_channels,
+            init_filters=2,
+        )
+
+
+class SegResNetTiny4Trainer(nnUNetTrainerNoDeepSupervision):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return nets.SegResNet(
+            spatial_dims=2,
+            in_channels=num_input_channels,
+            out_channels=num_output_channels,
+            init_filters=4,
+        )
+
+
+class SegResNetXTiny4Trainer(nnUNetTrainerNoDeepSupervision):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return nets.SegResNet(
+            spatial_dims=2,
+            in_channels=num_input_channels,
+            out_channels=num_output_channels,
+            init_filters=4,
+        )
+
 
 class UNETRTrainer(nnUNetTrainerNoDeepSupervision):
     @staticmethod
