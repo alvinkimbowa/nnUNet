@@ -1,4 +1,4 @@
-from MonaiTrainers import nnUNetTrainerNoDeepSupervision
+from nnunetv2.training.nnUNetTrainer.variants.network_architecture.MonaiTrainers import nnUNetTrainerNoDeepSupervision
 from typing import Union, Tuple, List
 from torch import nn
 import monai.networks.nets as nets
