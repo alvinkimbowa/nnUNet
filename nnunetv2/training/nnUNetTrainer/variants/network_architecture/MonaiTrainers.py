@@ -222,6 +222,7 @@ class SegResNetTiny1Trainer(nnUNetTrainerNoDeepSupervision):
             in_channels=num_input_channels,
             out_channels=num_output_channels,
             init_filters=1,
+            norm=("GROUP", {"num_groups": 1}),
         )
 
 
@@ -239,6 +240,7 @@ class SegResNetTiny2Trainer(nnUNetTrainerNoDeepSupervision):
             in_channels=num_input_channels,
             out_channels=num_output_channels,
             init_filters=2,
+            norm=("GROUP", {"num_groups": 2}),
         )
 
 
@@ -256,6 +258,7 @@ class SegResNetTiny4Trainer(nnUNetTrainerNoDeepSupervision):
             in_channels=num_input_channels,
             out_channels=num_output_channels,
             init_filters=4,
+            norm=("GROUP", {"num_groups": 4})
         )
 
 
