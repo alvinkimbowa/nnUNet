@@ -70,7 +70,7 @@ class UNetPlusPlusTrainerNoDeepSupervision(nnUNetTrainerNoDeepSupervision):
             spatial_dims=2,
             in_channels=num_input_channels,
             out_channels=num_output_channels,
-            deep_supervision=True,
+            deep_supervision=enable_deep_supervision,
         )
     
     def train_step(self, batch: dict) -> dict:
