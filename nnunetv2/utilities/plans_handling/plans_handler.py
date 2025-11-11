@@ -248,7 +248,18 @@ class PlansManager(object):
                 visited = (*visited, configuration_name)
 
             base_config = self._internal_resolve_configuration_inheritance(parent_config_name, visited)
-            base_config.update(configuration)
+            # Deep merge for nested dicts (especially architecture section)
+            for key, value in configuration.items():
+                if key == 'inherits_from':
+                    continue
+                if key in base_config and isinstance(base_config[key], dict) and isinstance(value, dict):
+                    # Deep merge nested dictionaries
+                    merged = deepcopy(base_config[key])
+                    merged.update(value)
+                    base_config[key] = merged
+                else:
+                    # Regular update for non-dict values
+                    base_config[key] = value
             configuration = base_config
         return configuration
 
