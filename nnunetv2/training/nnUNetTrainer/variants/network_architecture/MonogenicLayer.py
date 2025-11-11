@@ -12,11 +12,11 @@ from dynamic_network_architectures.building_blocks.helper import maybe_convert_s
 from dynamic_network_architectures.building_blocks.simple_conv_blocks import StackedConvBlocks
 from dynamic_network_architectures.architectures.unet import ResidualEncoderUNet
 
-class MonogenicUNetTrainer(nnUNetTrainer):
-    pass
-
 
 class MonogenicUNet(ResidualEncoderUNet):
+    """
+    ResidualEncoderUNet with Monogenic layer at the front-end (before encoder).
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mono2d = Mono2D()
@@ -24,8 +24,7 @@ class MonogenicUNet(ResidualEncoderUNet):
     
     def forward(self, x):
         x = self.mono2d(x)
-        skips = self.encoder(x)
-        return self.decoder(skips)
+        return super().forward(x)
 
 
 class Mono2D(nn.Module):
