@@ -8,7 +8,7 @@ class MonoUNet(ResidualEncoderUNet):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mono2d = Mono2D()
-        print("\n\nadded mono2d layer\n\n")
+        print("\n\nUsing MonoUNet with mono2d layer\n\n")
     
     def forward(self, x):
         x = self.mono2d(x)
