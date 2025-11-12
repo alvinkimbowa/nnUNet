@@ -1,31 +1,6 @@
 import torch
-from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from typing import Union, Tuple, List
-from torch import nn
+import torch.nn as nn
 import numpy as np
-from typing import Union, Type, List, Tuple
-
-from torch.nn.modules.conv import _ConvNd
-from torch.nn.modules.dropout import _DropoutNd
-from dynamic_network_architectures.building_blocks.residual import StackedResidualBlocks, BottleneckD, BasicBlockD
-from dynamic_network_architectures.building_blocks.helper import maybe_convert_scalar_to_list, get_matching_pool_op
-from dynamic_network_architectures.building_blocks.simple_conv_blocks import StackedConvBlocks
-from dynamic_network_architectures.architectures.unet import ResidualEncoderUNet
-
-
-class MonogenicUNet(ResidualEncoderUNet):
-    """
-    ResidualEncoderUNet with Monogenic layer at the front-end (before encoder).
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mono2d = Mono2D()
-        print("\n\nadded mono2d layer\n\n")
-    
-    def forward(self, x):
-        x = self.mono2d(x)
-        return super().forward(x)
-
 
 class Mono2D(nn.Module):
     # Adopted from:
