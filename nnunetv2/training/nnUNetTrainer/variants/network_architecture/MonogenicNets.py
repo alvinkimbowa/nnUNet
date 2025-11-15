@@ -6,13 +6,18 @@ from typing import List, Tuple
 from dynamic_network_architectures.architectures.unet import ResidualEncoderUNet
 from nnunetv2.training.nnUNetTrainer.variants.network_architecture.mono.mono_layer import Mono2D
 
-class MonoUNet(ResidualEncoderUNet):
+class MonoBaseNet(ResidualEncoderUNet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mono2d = Mono2D(nscale=6, norm="std")
+
+
+class MonoUNet(MonoBaseNet):
     """
     ResidualEncoderUNet with Monogenic layer at the front-end (before encoder).
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mono2d = Mono2D()
         print("\n\nUsing MonoUNet with mono2d layer\n\n")
     
     def forward(self, x):
@@ -20,7 +25,7 @@ class MonoUNet(ResidualEncoderUNet):
         return super().forward(x)
 
 
-class MonoEnhancedUNet(ResidualEncoderUNet):
+class MonoEnhancedUNet(MonoBaseNet):
     """
     ResidualEncoderUNet with Monogenic layer at the front-end (before encoder).
     The layer extracts the local phase features and combines them with the original image
@@ -29,7 +34,6 @@ class MonoEnhancedUNet(ResidualEncoderUNet):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mono2d = Mono2D()
         print("\n\nUsing MonoEnhancedUNet with mono2d layer\n\n")
     
     def forward(self, x):
@@ -37,7 +41,7 @@ class MonoEnhancedUNet(ResidualEncoderUNet):
         return super().forward(x)
 
 
-class MonoGatedUNet(ResidualEncoderUNet):
+class MonoGatedUNet(MonoBaseNet):
     """
     ResidualEncoderUNet with Monogenic layer at the front-end (before encoder).
     The layer extracts the local phase features and uses them to gate the original image
@@ -45,7 +49,6 @@ class MonoGatedUNet(ResidualEncoderUNet):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mono2d = Mono2D()
         print("\n\nUsing MonoGatedUNet with mono2d layer\n\n")
     
     def forward(self, x):
@@ -53,14 +56,14 @@ class MonoGatedUNet(ResidualEncoderUNet):
         return super().forward(x)
 
 
-class MonoSkipFusionUNet(ResidualEncoderUNet):
+class MonoSkipFusionUNet(MonoBaseNet):
     """
     ResidualEncoderUNet with pyramid local phase features fused with the original skip 
     connections before concatenation.
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mono2d = Mono2D()
+        self.mono2d_layers = nn.ModuleList([Mono2D(nscale=6, norm="std") for _ in range(len(self.encoder.output_channels) - 1)])
         self.mono_feature_channels = (
             int(self.mono2d.return_input)
             + int(self.mono2d.return_phase)
@@ -74,7 +77,7 @@ class MonoSkipFusionUNet(ResidualEncoderUNet):
             nn.Conv2d(ch + self.mono_feature_channels, ch, kernel_size=1, bias=False)
             for ch in self.encoder.output_channels[:-1]
         )
-        print("\n\nUsing MonoSkipFusionUNet with mono2d layer\n\n")
+        print("\n\nUsing MonoSkipFusionUNet with separate mono2d layers for each stage\n\n")
 
     def _prepare_mono_inputs(self, x: torch.Tensor, target_shapes: List[Tuple[int, int]]) -> List[torch.Tensor]:
         mono_inputs: List[torch.Tensor] = []
@@ -98,18 +101,20 @@ class MonoSkipFusionUNet(ResidualEncoderUNet):
             return super().forward(x)
 
         skips = self.encoder(x)
-        skip_shapes = [tuple(feat.shape[2:]) for feat in skips[:-1]]
-        mono_inputs = self._prepare_mono_inputs(x, skip_shapes)
-        enhanced_skips: List[torch.Tensor] = list(skips)
-
-        for idx, (mono_input, fusion_layer) in enumerate(zip(mono_inputs, self.skip_fusion)):
-            mono_features = self.mono2d(mono_input)
-            enhanced_skips[idx] = fusion_layer(torch.cat((enhanced_skips[idx], mono_features), dim=1))
+        target_shapes = [tuple(s.shape[2:]) for s in skips[:-1]]
+        mono_inputs = self._prepare_mono_inputs(x, target_shapes)
+        enhanced_skips: List[torch.Tensor] = []
+        for idx, (skip, mono) in enumerate(zip(skips[:-1], mono_inputs)):
+            mono_features = self.mono2d_layers[idx](mono)
+            enhanced_skip = torch.cat((skip, mono_features), dim=1)
+            enhanced_skip = self.skip_fusion[idx](enhanced_skip)
+            enhanced_skips.append(enhanced_skip)
+        enhanced_skips.append(skips[-1])
 
         return self.decoder(enhanced_skips)
 
 
-class MonoGatedSkipUNet(ResidualEncoderUNet):
+class MonoGatedSkipUNet(MonoBaseNet):
     """
     ResidualEncoderUNet with local phase features gated skip connections.
     The layer downsamples the input image to the same number of stages of the encoder, 
@@ -118,8 +123,8 @@ class MonoGatedSkipUNet(ResidualEncoderUNet):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mono2d = Mono2D()
-        print("\n\nUsing MonoGatedSkipUNet with mono2d layer\n\n")
+        self.mono2d_layers = nn.ModuleList([Mono2D(nscale=6, norm="std") for _ in range(len(self.encoder.output_channels) - 1)])
+        print("\n\nUsing MonoGatedSkipUNet with separate mono2d layers for each stage\n\n")
 
     def _build_mono_pyramid(self, x: torch.Tensor, target_shapes: List[Tuple[int, int]]) -> List[torch.Tensor]:
         mono_inputs: List[torch.Tensor] = []
@@ -138,8 +143,8 @@ class MonoGatedSkipUNet(ResidualEncoderUNet):
             mono_inputs.append(current)
         return mono_inputs
 
-    def _gate_skip(self, skip: torch.Tensor, mono_input: torch.Tensor) -> torch.Tensor:
-        gate = self.mono2d(mono_input)
+    def _gate_skip(self, skip: torch.Tensor, mono_input: torch.Tensor, layer_idx: int) -> torch.Tensor:
+        gate = self.mono2d_layers[layer_idx](mono_input)
         return skip * torch.sigmoid(gate)
 
     def forward(self, x):
@@ -152,6 +157,6 @@ class MonoGatedSkipUNet(ResidualEncoderUNet):
         gated_skips: List[torch.Tensor] = list(skips)
 
         for idx, mono_input in enumerate(mono_inputs):
-            gated_skips[idx] = self._gate_skip(gated_skips[idx], mono_input)
+            gated_skips[idx] = self._gate_skip(gated_skips[idx], mono_input, idx)
 
         return self.decoder(gated_skips)
