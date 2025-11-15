@@ -37,7 +37,7 @@ class Mono2D(nn.Module):
     def __init__(
         self, nscale: int = 1, sigmaonf: float = None, wls: list = None, trainable: bool = True,
         return_phase: bool = True, return_phase_asym: bool = False, return_phase_sym: bool = False,
-        return_ori: bool = False, return_input: bool = False, img_size: tuple = (512, 512),
+        return_ori: bool = False, return_input: bool = False, norm: str = "std"
         ):
         super(Mono2D, self).__init__()
 
@@ -48,6 +48,7 @@ class Mono2D(nn.Module):
         self.return_input = return_input
         self.return_ori = return_ori
         self.trainable = True if trainable is None else trainable
+        self.norm = norm
 
         assert nscale > 0
         self.nscale = nn.Parameter(torch.tensor(nscale, dtype=torch.int), requires_grad=False)
@@ -108,17 +109,14 @@ class Mono2D(nn.Module):
         # Compute the phase asymmetry and phase symmetry
         phase_sym = torch.sum(An * torch.clamp(symmetry_energy - self.T, min=0), dim=1) / (torch.sum(An, dim=1) + self.episilon)
         phase_asym = torch.sum(torch.clamp(-symmetry_energy - self.T, min=0), dim=1) / (torch.sum(An, dim=1) + self.episilon)
-        phase_sym = self.scale_max_min(phase_sym)
-        phase_asym = self.scale_max_min(phase_asym)
-
+        
         # Orientation - this varies +/- pi
         ori = torch.atan2(-h2,h1)
         # ori = self.scale_max_min(ori) # Normalizing angles loses circularity
 
         # Feature type - a phase angle +/- pi.
         ft = torch.atan(f/torch.sqrt(h1 ** 2 + h2 ** 2))
-        ft = self.scale_max_min(ft)
-
+        
         out = []
         if self.return_input:
             out.append(x)
@@ -131,7 +129,16 @@ class Mono2D(nn.Module):
         if self.return_phase_asym:
             out.append(phase_asym)
 
-        return torch.stack(out, dim=1)
+        out = torch.stack(out, dim=1)
+        if self.norm == "std":
+            out = self.std_normalize(out)
+        elif self.norm == "min_max":
+            out = self.min_max_normalize(out)
+        elif self.norm == "none":
+            pass
+        else:
+            raise ValueError(f"Invalid normalization method: {self.norm}")
+        return out
 
     def get_filters(self, rows, cols):
         u1, u2, radius = self.mesh_range((rows, cols))
@@ -305,10 +312,15 @@ class Mono2D(nn.Module):
     def get_device(self):
         return self.parameters().__next__().device
     
-    def scale_max_min(self, x):
+    def min_max_normalize(self, x):
         x_min = torch.amin(x, dim=(-2, -1), keepdim=True)
         x_max = torch.amax(x, dim=(-2, -1), keepdim=True)
         return (x - x_min) / (x_max - x_min)
+    
+    def std_normalize(self, x):
+        x_mean = x.mean(dim=(-2, -1), keepdim=True)
+        x_std = x.std(dim=(-2, -1), keepdim=True)
+        return (x - x_mean) / (x_std + self.episilon)
     
     def get_params(self):
         # return a dictionary of the parameters
