@@ -7,9 +7,9 @@ from dynamic_network_architectures.architectures.unet import ResidualEncoderUNet
 from nnunetv2.training.nnUNetTrainer.variants.network_architecture.mono.mono_layer import Mono2D
 
 class MonoBaseNet(ResidualEncoderUNet):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, mono_layer_kwargs: dict = {}, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mono2d = Mono2D(nscale=6, norm="std")
+        self.mono2d = Mono2D(**mono_layer_kwargs, norm="std")
 
 
 class MonoUNet(MonoBaseNet):
