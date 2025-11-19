@@ -228,6 +228,16 @@ class PlansManager(object):
     def __repr__(self):
         return self.plans.__repr__()
 
+    @staticmethod
+    def _deep_merge_dicts(base: dict, override: dict) -> dict:
+        base_copy = deepcopy(base)
+        for k, v in override.items():
+            if k in base_copy and isinstance(base_copy[k], dict) and isinstance(v, dict):
+                base_copy[k] = PlansManager._deep_merge_dicts(base_copy[k], v)
+            else:
+                base_copy[k] = deepcopy(v)
+        return base_copy
+
     def _internal_resolve_configuration_inheritance(self, configuration_name: str,
                                                     visited: Tuple[str, ...] = None) -> dict:
         if configuration_name not in self.plans['configurations'].keys():
@@ -254,12 +264,10 @@ class PlansManager(object):
                     continue
                 if key in base_config and isinstance(base_config[key], dict) and isinstance(value, dict):
                     # Deep merge nested dictionaries
-                    merged = deepcopy(base_config[key])
-                    merged.update(value)
-                    base_config[key] = merged
+                    base_config[key] = self._deep_merge_dicts(base_config[key], value)
                 else:
                     # Regular update for non-dict values
-                    base_config[key] = value
+                    base_config[key] = deepcopy(value)
             configuration = base_config
         return configuration
 
