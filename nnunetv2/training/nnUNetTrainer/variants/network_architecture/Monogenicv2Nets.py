@@ -18,7 +18,37 @@ from dynamic_network_architectures.building_blocks.helper import maybe_convert_s
 from dynamic_network_architectures.building_blocks.simple_conv_blocks import StackedConvBlocks
 
 
-class MonoUNet(ResidualEncoderUNet):
+class Monov2UNet(ResidualEncoderUNet):
+    def __init__(self, mono_layer_kwargs: dict = {}, input_channels: int = 1, *args, **kwargs):
+        mono_frontend = Mono2DV2(in_channels=input_channels, norm=None, **mono_layer_kwargs)
+        input_channels = mono_frontend.out_channels
+        super().__init__(input_channels=input_channels, *args, **kwargs)
+        self.encoder.mono_frontend = mono_frontend
+    
+    def forward(self, x):
+        x = self.encoder.mono_frontend(x)
+        return super().forward(x)
+
+
+class Monov2UNet01(ResidualEncoderUNet):
+    """
+    Has instance normalization after the mono2d layer.
+    """
+    def __init__(self, mono_layer_kwargs: dict = {}, input_channels: int = 1, *args, **kwargs):
+        mono_frontend = Mono2DV2(in_channels=input_channels, norm=None, **mono_layer_kwargs)
+        input_channels = mono_frontend.out_channels
+        super().__init__(input_channels=input_channels, *args, **kwargs)
+        self.encoder.mono_frontend = nn.Sequential(
+            mono_frontend, 
+            nn.InstanceNorm2d(input_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=False)
+        )
+
+    def forward(self, x):
+        x = self.encoder.mono_frontend(x)
+        return super().forward(x)
+
+
+class Monov2UNetEncoder(ResidualEncoderUNet):
     def __init__(self, mono_layer_kwargs: dict = {}, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Extract parameters that shouldn't be passed to encoder
@@ -117,8 +147,12 @@ class MonoResidualEncoder(nn.Module):
         pool_op = get_matching_pool_op(conv_op, pool_type=pool_type) if pool_type != 'conv' else None
 
         # Add a Mono2DV2 layer at the encoder visual front-end
-        self.mono_frontend = Mono2DV2(in_channels=input_channels, norm=None, **mono_layer_kwargs)
-        input_channels = self.mono_frontend.out_channels
+        mono_frontend = Mono2DV2(in_channels=input_channels, norm=None, **mono_layer_kwargs)
+        input_channels = mono_frontend.out_channels
+        self.mono_frontend = nn.Sequential(
+            mono_frontend,
+            nn.InstanceNorm2d(input_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=False)
+        )
 
         # build a stem, Todo maybe we need more flexibility for this in the future. For now, if you need a custom
         #  stem you can just disable the stem and build your own.
@@ -135,8 +169,14 @@ class MonoResidualEncoder(nn.Module):
 
         # now build the network
         stages = []
+        mono_layers = []
         for s in range(n_stages):
             stride_for_conv = strides[s] if pool_op is None else 1
+
+            # Add a Mono2DV2 layer at each stage of the encoder to compensate for lost capacity
+            mono_layer = Mono2DV2(in_channels=input_channels, nscale=1, **mono_layer_kwargs)
+            mono_layers.append(mono_layer)
+            input_channels = mono_layer.out_channels
 
             stage = StackedResidualBlocks(
                 n_blocks_per_stage[s], conv_op, input_channels, features_per_stage[s], kernel_sizes[s], stride_for_conv,
@@ -153,6 +193,7 @@ class MonoResidualEncoder(nn.Module):
             input_channels = features_per_stage[s]
 
         self.stages = nn.Sequential(*stages)
+        self.mono_layers = nn.ModuleList(mono_layers)
         self.output_channels = features_per_stage
         self.strides = [maybe_convert_scalar_to_list(conv_op, i) for i in strides]
         self.return_skips = return_skips
@@ -176,7 +217,8 @@ class MonoResidualEncoder(nn.Module):
         if self.stem is not None:
             x = self.stem(x)
         ret = []
-        for s in self.stages:
+        for mono_layer, s in zip(self.mono_layers, self.stages):
+            x = mono_layer(x)
             x = s(x)
             ret.append(x)
         if self.return_skips:
