@@ -170,7 +170,7 @@ class Mono2D(nn.Module):
         # Apply low-pass filter
         lgf = lgf * lp
         # Set the value at the 0 frequency point of the filter back to zero (undo the radius fudge).
-        lgf[0,0] = 0
+        lgf[..., 0, 0] = 0
 
         return H, lgf
 
@@ -338,4 +338,127 @@ class Mono2D(nn.Module):
             "self.cut_off": self.cut_off,
             "self.g": self.g,
             "self.T": self.T.item(),
+        }
+
+
+class Mono2DV2(Mono2D):
+    def __init__(self, in_channels: int = 1, **kwargs):
+        self.in_channels = in_channels
+        super().__init__(**kwargs)
+
+    def forward(self, x):
+        B, C, rows, cols = x.size()
+        # Transform the input image to frequency domain
+        IM = torch.fft.fft2(x, dim=(-2, -1)).to(self.get_device())    # FLOPS = 5 × H × W × log₂(H × W)
+
+        # Get filters
+        H, lgf = self.get_filters(rows, cols)
+
+        # Bandpassed image in the frequency domain
+        IMF = IM.view(B, C, 1, rows, cols) * lgf            # FLOPS = nscale × 6 × H × W => (a+ib) * (c+id) = (ac-bd) + i(ad+bc)
+        
+        # Bandpassed image in the spatial domain
+        f = torch.fft.ifft2(IMF, dim=(-2, -1)).real           # FLOPS = 5 × H × W × log₂(H × W)
+
+        # Bandpassed monogenic filtering, real part of h contains convolution result with h1, 
+        # imaginary part contains convolution result with h2
+        h = torch.fft.ifft2(IMF * H, dim=(-2, -1))            # FLOPS = [5 × H × W × log₂(H × W)] + [6 × H × W]
+        h1 = h.real
+        h2 = h.imag
+        h_Amp2 = h1 ** 2 + h2 ** 2          # Amplitude of the bandpassed monogenic signal
+        An = torch.sqrt(f ** 2 + h_Amp2)    # Magnitude of Energy (Amplitude)
+        
+        # Compute the phase asymmetry (odd - even)
+        symmetry_energy = torch.abs(f) - torch.sqrt(h_Amp2)
+
+        # Compute the phase asymmetry and phase symmetry
+        phase_sym = (An * torch.clamp(symmetry_energy - self.T, min=0)) / (An + self.episilon)
+        phase_asym = (torch.clamp(-symmetry_energy - self.T, min=0)) / (An + self.episilon)
+
+        # # Orientation - this varies +/- pi
+        ori = torch.atan2(-h2,h1)
+
+        # Feature type - a phase angle +/- pi.
+        ft = torch.atan(f/torch.sqrt(h1 ** 2 + h2 ** 2))            # FLOPS = 1 × H × W
+        
+        out = []
+        if self.return_input:
+            out.append(x)
+        if self.return_phase:
+            out.append(ft)
+        if self.return_ori:
+            out.append(ori)
+        if self.return_phase_sym:
+            out.append(phase_sym)
+        if self.return_phase_asym:
+            out.append(phase_asym)
+
+        # Concatenate along the channel dimension: (B x [features] x nscale x H x W) -> (B x (features*nscale) x H x W)
+        out = torch.cat([o.reshape(B, -1, o.shape[-2], o.shape[-1]) for o in out], dim=1)
+        # out = torch.stack(out, dim=1)
+        print("out: ", out.shape)
+        if self.norm == "std":
+            out = self.std_normalize(out)
+        elif self.norm == "min_max":
+            out = self.min_max_normalize(out)
+        elif self.norm == "none":
+            pass
+        else:
+            raise ValueError(f"Invalid normalization method: {self.norm}")
+        return out
+
+    def compute_logGabor(self, radius):
+        # Obtain the different scales wavelengths
+        wls = self.get_wls()
+        # Obtain the center frequencies
+        fo = 1.0 / wls
+        # Reshape fo to be broadcastable with radius
+        fo = fo.view(self.in_channels, self.nscale, 1, 1)
+        # The parameter sigmaonf is in the range -inf to inf. Rescale it to 0-1
+        sigmaonf = torch.nn.functional.sigmoid(self.sigmaonf).view(self.in_channels, self.nscale, 1, 1)
+        # Construct the filter
+        filter = torch.exp((-(torch.log(radius/fo)) ** 2) / (2 * torch.log(sigmaonf) ** 2))
+        return filter.to(self.get_device())
+    
+    def initialize_sigmaonf(self, sigmaonf):
+        nscale = int(self.nscale.item())
+        print("initializing sigmaonf")
+        if sigmaonf is None:
+            # Choose random values very close to zero (akin to choosing sigmaonf ~ 0.5)
+            return torch.randn(self.in_channels, nscale) * 0.05
+        else:
+            sigmaonf = torch.as_tensor(sigmaonf, dtype=torch.float32)
+            if sigmaonf.ndim == 0:
+                sigmaonf = sigmaonf.repeat(self.in_channels, nscale)
+            else:
+                assert sigmaonf.numel() == self.in_channels * nscale
+            valid = torch.all((sigmaonf > 0) & (sigmaonf < 1))
+            assert bool(valid)
+            # Transform sigmaonf to between -inf and inf by applying the inverse sigmoid function
+            return torch.log(sigmaonf / (1 - sigmaonf))
+    
+    def initialize_wls(self, wls):
+        if wls is None:
+            return torch.randn(self.in_channels, int(self.nscale.item()))
+        else:
+            assert np.all(wls > 0)  # Cannot have a negative wavelength
+            # Rescale the wavelengths to be between 0 and 1 for faster training
+            wls = torch.tensor((wls - self.min_wl) / (self.max_wl - self.min_wl))
+            return torch.log(wls / (1 - wls))
+    
+    def get_params(self):
+        # return a dictionary of the parameters
+        return {
+            "nscale": self.nscale.item(),
+            "max_wl": self.max_wl,
+            "wls": self.get_wls().tolist(),
+            "sigmaonf": self.get_sigmaonf().tolist(),
+            "trainable": self.wls.requires_grad,
+            "return_phase": self.return_phase,
+            "return_phase_asym": self.return_phase_asym,
+            "return_ori": self.return_ori,
+            "return_input": self.return_input,
+            "cut_off": self.cut_off,
+            "g": self.g,
+            "T": self.T.item(),
         }
