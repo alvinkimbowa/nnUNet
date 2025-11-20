@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+
 class Mono2D(nn.Module):
     # Adopted from:
     # Copyright (c) 1996-2009 Peter Kovesi
@@ -99,17 +100,17 @@ class Mono2D(nn.Module):
 
         # Compute the phase asymmetry (odd - even)
         symmetry_energy = torch.abs(f) - torch.sqrt(h_Amp2)
+                
+        # Compute the phase asymmetry and phase symmetry
+        phase_sym = torch.sum(An * torch.clamp(symmetry_energy - self.T, min=0), dim=1) / (torch.sum(An, dim=1) + self.episilon)
+        phase_asym = torch.sum(torch.clamp(-symmetry_energy - self.T, min=0), dim=1) / (torch.sum(An, dim=1) + self.episilon)
         
         # Sum all responses across all scales
         f = torch.sum(f, dim=1)
         h1 = torch.sum(h1, dim=1)
         h2 = torch.sum(h2, dim=1)
         h_Amp2 = torch.sum(h_Amp2, dim=1)
-        
-        # Compute the phase asymmetry and phase symmetry
-        phase_sym = torch.sum(An * torch.clamp(symmetry_energy - self.T, min=0), dim=1) / (torch.sum(An, dim=1) + self.episilon)
-        phase_asym = torch.sum(torch.clamp(-symmetry_energy - self.T, min=0), dim=1) / (torch.sum(An, dim=1) + self.episilon)
-        
+
         # Orientation - this varies +/- pi
         ori = torch.atan2(-h2,h1)
         # ori = self.scale_max_min(ori) # Normalizing angles loses circularity
