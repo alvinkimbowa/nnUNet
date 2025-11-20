@@ -338,12 +338,32 @@ class Mono2D(nn.Module):
             "self.g": self.g,
             "self.T": self.T.item(),
         }
+    
+    def extra_repr(self) -> str:
+        return (
+            f"nscale={int(self.nscale.item())}, "
+            f"trainable={self.trainable}, "
+            f"norm={self.norm}, "
+            f"return_input={self.return_input}, "
+            f"return_phase={self.return_phase}, "
+            f"return_ori={self.return_ori}, "
+            f"return_phase_sym={self.return_phase_sym}, "
+            f"return_phase_asym={self.return_phase_asym}"
+        )
 
 
 class Mono2DV2(Mono2D):
     def __init__(self, in_channels: int = 1, **kwargs):
         self.in_channels = in_channels
         super().__init__(**kwargs)
+
+        self.out_channels = (
+            int(self.return_input)
+            + int(self.return_phase)
+            + int(self.return_ori)
+            + int(self.return_phase_sym)
+            + int(self.return_phase_asym)
+        ) * self.nscale * self.in_channels
 
     def forward(self, x):
         B, C, rows, cols = x.size()
@@ -400,7 +420,7 @@ class Mono2DV2(Mono2D):
             out = self.std_normalize(out)
         elif self.norm == "min_max":
             out = self.min_max_normalize(out)
-        elif self.norm == "none":
+        elif self.norm == "none" or self.norm is None:
             pass
         else:
             raise ValueError(f"Invalid normalization method: {self.norm}")
@@ -461,3 +481,17 @@ class Mono2DV2(Mono2D):
             "g": self.g,
             "T": self.T.item(),
         }
+
+    def extra_repr(self) -> str:
+        return (
+            f"in_channels={self.in_channels}, "
+            f"out_channels={self.out_channels}, "
+            f"nscale={int(self.nscale.item())}, "
+            f"trainable={self.trainable}, "
+            f"norm={self.norm}, "
+            f"return_input={self.return_input}, "
+            f"return_phase={self.return_phase}, "
+            f"return_ori={self.return_ori}, "
+            f"return_phase_sym={self.return_phase_sym}, "
+            f"return_phase_asym={self.return_phase_asym}"
+        )
