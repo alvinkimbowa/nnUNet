@@ -366,6 +366,7 @@ class Mono2DV2(Mono2D):
         ) * self.nscale * self.in_channels
 
     def forward(self, x):
+        x = x.to(dtype=torch.float32)
         B, C, rows, cols = x.size()
         # Transform the input image to frequency domain
         IM = torch.fft.fft2(x, dim=(-2, -1)).to(self.get_device())    # FLOPS = 5 × H × W × log₂(H × W)
