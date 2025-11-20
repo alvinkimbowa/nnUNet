@@ -38,7 +38,7 @@ class Mono2D(nn.Module):
     def __init__(
         self, nscale: int = 1, sigmaonf: float = None, wls: list = None, trainable: bool = True,
         return_phase: bool = True, return_phase_asym: bool = False, return_phase_sym: bool = False,
-        return_ori: bool = False, return_input: bool = False, norm: str = "std"
+        return_ori: bool = False, return_input: bool = False, norm: str = None
         ):
         super(Mono2D, self).__init__()
 
@@ -135,11 +135,10 @@ class Mono2D(nn.Module):
             out = self.std_normalize(out)
         elif self.norm == "min_max":
             out = self.min_max_normalize(out)
-        elif self.norm == "none":
-            pass
+        elif self.norm is None:
+            return out
         else:
             raise ValueError(f"Invalid normalization method: {self.norm}")
-        return out
 
     def get_filters(self, rows, cols):
         u1, u2, radius = self.mesh_range((rows, cols))
