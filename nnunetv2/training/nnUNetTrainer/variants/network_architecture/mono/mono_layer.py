@@ -415,7 +415,6 @@ class Mono2DV2(Mono2D):
         # Concatenate along the channel dimension: (B x [features] x nscale x H x W) -> (B x (features*nscale) x H x W)
         out = torch.cat([o.reshape(B, -1, o.shape[-2], o.shape[-1]) for o in out], dim=1)
         # out = torch.stack(out, dim=1)
-        print("out: ", out.shape)
         if self.norm == "std":
             out = self.std_normalize(out)
         elif self.norm == "min_max":
@@ -441,7 +440,6 @@ class Mono2DV2(Mono2D):
     
     def initialize_sigmaonf(self, sigmaonf):
         nscale = int(self.nscale.item())
-        print("initializing sigmaonf")
         if sigmaonf is None:
             # Choose random values very close to zero (akin to choosing sigmaonf ~ 0.5)
             return torch.randn(self.in_channels, nscale) * 0.05
