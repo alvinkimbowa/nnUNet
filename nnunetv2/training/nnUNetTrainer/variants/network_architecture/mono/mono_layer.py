@@ -330,7 +330,8 @@ class Mono2D(nn.Module):
         # return a dictionary of the parameters
         return {
             "nscale": self.nscale.item(),
-            "self.max_wl": self.max_wl,
+            "min_wl": self.min_wl,
+            "max_wl": self.max_wl,
             "wls": self.get_wls().tolist(),
             "sigmaonf": self.get_sigmaonf().item(),
             "trainable": self.wls.requires_grad,
@@ -338,9 +339,9 @@ class Mono2D(nn.Module):
             "return_phase_asym": self.return_phase_asym,
             "return_ori": self.return_ori,
             "return_input": self.return_input,
-            "self.cut_off": self.cut_off,
-            "self.g": self.g,
-            "self.T": self.T.item(),
+            "cut_off": self.cut_off,
+            "g": self.g,
+            "T": self.T.item(),
         }
     
     def extra_repr(self) -> str:
