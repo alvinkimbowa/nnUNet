@@ -35,7 +35,7 @@ class Monov2UNet01(ResidualEncoderUNet):
     Has instance normalization after the mono2d layer.
     """
     def __init__(self, mono_layer_kwargs: dict = {}, input_channels: int = 1, *args, **kwargs):
-        mono_frontend = Mono2DV2(in_channels=input_channels, norm=None, **mono_layer_kwargs)
+        mono_frontend = Mono2DV2(in_channels=input_channels, norm="std", **mono_layer_kwargs)
         input_channels = mono_frontend.out_channels
         super().__init__(input_channels=input_channels, *args, **kwargs)
         self.encoder.mono_frontend = nn.Sequential(
@@ -147,12 +147,8 @@ class MonoResidualEncoder(nn.Module):
         pool_op = get_matching_pool_op(conv_op, pool_type=pool_type) if pool_type != 'conv' else None
 
         # Add a Mono2DV2 layer at the encoder visual front-end
-        mono_frontend = Mono2DV2(in_channels=input_channels, norm=None, **mono_layer_kwargs)
-        input_channels = mono_frontend.out_channels
-        self.mono_frontend = nn.Sequential(
-            mono_frontend,
-            nn.InstanceNorm2d(input_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=False)
-        )
+        self.mono_frontend = Mono2DV2(in_channels=input_channels, norm="std", **mono_layer_kwargs)
+        input_channels = self.mono_frontend.out_channels
 
         # build a stem, Todo maybe we need more flexibility for this in the future. For now, if you need a custom
         #  stem you can just disable the stem and build your own.
@@ -174,9 +170,9 @@ class MonoResidualEncoder(nn.Module):
             stride_for_conv = strides[s] if pool_op is None else 1
 
             # Add a Mono2DV2 layer at each stage of the encoder to compensate for lost capacity
-            mono_layer = Mono2DV2(in_channels=input_channels, nscale=1, **mono_layer_kwargs)
+            mono_layer = Mono2DV2(in_channels=input_channels, norm="std", **mono_layer_kwargs)
             mono_layers.append(mono_layer)
-            input_channels = mono_layer.out_channels
+            input_channels = mono_layer.out_channels + input_channels
 
             stage = StackedResidualBlocks(
                 n_blocks_per_stage[s], conv_op, input_channels, features_per_stage[s], kernel_sizes[s], stride_for_conv,
@@ -218,8 +214,8 @@ class MonoResidualEncoder(nn.Module):
             x = self.stem(x)
         ret = []
         for mono_layer, s in zip(self.mono_layers, self.stages):
-            x = mono_layer(x)
-            x = s(x)
+            mono_features = mono_layer(x)
+            x = s(torch.cat([x, mono_features], dim=1))
             ret.append(x)
         if self.return_skips:
             return ret
