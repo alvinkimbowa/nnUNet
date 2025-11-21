@@ -331,11 +331,8 @@ class Mono2D(nn.Module):
         # return a dictionary of the parameters
         return {
             "nscale": self.nscale.item(),
-            "min_wl": self.min_wl,
-            "max_wl": self.max_wl,
             "wls": self.get_wls().tolist(),
             "sigmaonf": self.get_sigmaonf().item(),
-            "trainable": self.wls.requires_grad,
             "return_phase": self.return_phase,
             "return_phase_asym": self.return_phase_asym,
             "return_ori": self.return_ori,
@@ -343,20 +340,23 @@ class Mono2D(nn.Module):
             "cut_off": self.cut_off,
             "g": self.g,
             "T": self.T.item(),
+            "min_wl": self.min_wl,
+            "max_wl": self.max_wl,
             "episilon": self.episilon,
             "norm": self.norm,
+            "trainable": self.wls.requires_grad,
         }
     
     def extra_repr(self) -> str:
         return (
             f"nscale={int(self.nscale.item())}, "
-            f"trainable={self.trainable}, "
             f"norm={self.norm}, "
             f"return_input={self.return_input}, "
             f"return_phase={self.return_phase}, "
             f"return_ori={self.return_ori}, "
             f"return_phase_sym={self.return_phase_sym}, "
             f"return_phase_asym={self.return_phase_asym}"
+            f"trainable={self.trainable}"
         )
 
 
@@ -365,13 +365,13 @@ class Mono2DV2(Mono2D):
         self.in_channels = in_channels
         super().__init__(**kwargs)
 
-        self.out_channels = (
+        self.out_channels = ((
             int(self.return_input)
             + int(self.return_phase)
             + int(self.return_ori)
             + int(self.return_phase_sym)
             + int(self.return_phase_asym)
-        ) * self.nscale * self.in_channels
+        ) * self.nscale * self.in_channels).item()
 
     def forward(self, x):
         x = x.to(dtype=torch.float32)
@@ -476,11 +476,10 @@ class Mono2DV2(Mono2D):
     def get_params(self):
         # return a dictionary of the parameters
         return {
+            "in_channels": self.in_channels,
             "nscale": self.nscale.item(),
-            "max_wl": self.max_wl,
             "wls": self.get_wls().tolist(),
             "sigmaonf": self.get_sigmaonf().tolist(),
-            "trainable": self.wls.requires_grad,
             "return_phase": self.return_phase,
             "return_phase_asym": self.return_phase_asym,
             "return_ori": self.return_ori,
@@ -488,20 +487,12 @@ class Mono2DV2(Mono2D):
             "cut_off": self.cut_off,
             "g": self.g,
             "T": self.T.item(),
+            "min_wl": self.min_wl,
+            "max_wl": self.max_wl,
             "episilon": self.episilon,
             "norm": self.norm,
+            "trainable": self.wls.requires_grad,
         }
 
     def extra_repr(self) -> str:
-        return (
-            f"in_channels={self.in_channels}, "
-            f"out_channels={self.out_channels}, "
-            f"nscale={int(self.nscale.item())}, "
-            f"trainable={self.trainable}, "
-            f"norm={self.norm}, "
-            f"return_input={self.return_input}, "
-            f"return_phase={self.return_phase}, "
-            f"return_ori={self.return_ori}, "
-            f"return_phase_sym={self.return_phase_sym}, "
-            f"return_phase_asym={self.return_phase_asym}"
-        )
+        return f"in_channels={self.in_channels}, out_channels={self.out_channels}, " + super().extra_repr()
