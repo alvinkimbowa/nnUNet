@@ -299,6 +299,7 @@ class Mono2D(nn.Module):
         if wls is None:
             return torch.randn(self.nscale)
         else:
+            wls = np.asarray(wls)  # Convert to numpy array for comparison
             assert np.all(wls > 0)  # Cannot have a negative wavelength
             # Rescale the wavelengths to be between 0 and 1 for faster training
             wls = torch.tensor((wls - self.min_wl) / (self.max_wl - self.min_wl))
@@ -464,6 +465,7 @@ class Mono2DV2(Mono2D):
         if wls is None:
             return torch.randn(self.in_channels, int(self.nscale.item()))
         else:
+            wls = np.asarray(wls)  # Convert to numpy array for comparison
             assert np.all(wls > 0)  # Cannot have a negative wavelength
             # Rescale the wavelengths to be between 0 and 1 for faster training
             wls = torch.tensor((wls - self.min_wl) / (self.max_wl - self.min_wl))
