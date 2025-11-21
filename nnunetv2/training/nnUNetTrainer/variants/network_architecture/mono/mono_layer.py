@@ -36,9 +36,12 @@ class Mono2D(nn.Module):
     #------------------------------------------------------------------------
 
     def __init__(
-        self, nscale: int = 1, sigmaonf: float = None, wls: list = None, trainable: bool = True,
+        self, nscale: int = 1, sigmaonf: list = None, wls: list = None,
         return_phase: bool = True, return_phase_asym: bool = False, return_phase_sym: bool = False,
-        return_ori: bool = False, return_input: bool = False, norm: str = None
+        return_ori: bool = False, return_input: bool = False, norm: str = "std",
+        T: float = 0.0, cut_off: float = 0.5, g: int = 10, episilon: float = 0.0001,
+        min_wl: float = 3.0, max_wl: float = 128.0,
+        trainable: bool = True
         ):
         super(Mono2D, self).__init__()
 
@@ -48,7 +51,7 @@ class Mono2D(nn.Module):
         self.return_phase_asym = return_phase_asym
         self.return_input = return_input
         self.return_ori = return_ori
-        self.trainable = True if trainable is None else trainable
+        self.trainable = trainable
         self.norm = norm
 
         assert nscale > 0
@@ -57,11 +60,11 @@ class Mono2D(nn.Module):
         # Fixed parameters
         # According to Nyquist theorem, the smallest wavelength should be 2 pixels to avoid aliasing.
         # Pick 3 pixels to be totally certain.
-        self.min_wl = 3.0
+        self.min_wl = min_wl
         # Heuristically, at least for knee cartilage, the max wavelength won't reach 128 pixels.
         # This is a temporary fix that will be investigated in future work
-        self.max_wl = 128.0
-
+        self.max_wl = max_wl
+        
         # Learned parameters
         self.wls = nn.Parameter(self.initialize_wls(wls), requires_grad=self.trainable)
         self.sigmaonf = nn.Parameter(self.initialize_sigmaonf(sigmaonf), requires_grad=self.trainable)
@@ -70,11 +73,11 @@ class Mono2D(nn.Module):
         # that quickly falls to zero at the boundaries. Cut-off frequency (normalized)
         # should be between 0 and 0.5 according to Nyquist theorem.
         # The larger the value of g, the sharper the transition to zero.
-        self.cut_off = 0.5
-        self.g = 10
-        self.T = nn.Parameter(torch.tensor(0.0), requires_grad=self.trainable)
+        self.cut_off = cut_off
+        self.g = g
+        self.T = nn.Parameter(torch.tensor(T), requires_grad=self.trainable)
         # Set a small value used throughout the layer to avoid division by zero
-        self.episilon = 0.0001
+        self.episilon = episilon
 
     def forward(self, x):
         _, _, rows, cols = x.size()
