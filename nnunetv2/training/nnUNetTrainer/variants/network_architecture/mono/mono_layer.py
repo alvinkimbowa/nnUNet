@@ -343,6 +343,8 @@ class Mono2D(nn.Module):
             "cut_off": self.cut_off,
             "g": self.g,
             "T": self.T.item(),
+            "episilon": self.episilon,
+            "norm": self.norm,
         }
     
     def extra_repr(self) -> str:
@@ -486,6 +488,8 @@ class Mono2DV2(Mono2D):
             "cut_off": self.cut_off,
             "g": self.g,
             "T": self.T.item(),
+            "episilon": self.episilon,
+            "norm": self.norm,
         }
 
     def extra_repr(self) -> str:
