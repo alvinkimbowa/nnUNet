@@ -136,9 +136,10 @@ class Mono2D(nn.Module):
         elif self.norm == "min_max":
             out = self.min_max_normalize(out)
         elif self.norm is None:
-            return out
+            pass
         else:
             raise ValueError(f"Invalid normalization method: {self.norm}")
+        return out
 
     def get_filters(self, rows, cols):
         u1, u2, radius = self.mesh_range((rows, cols))
@@ -420,7 +421,7 @@ class Mono2DV2(Mono2D):
             out = self.std_normalize(out)
         elif self.norm == "min_max":
             out = self.min_max_normalize(out)
-        elif self.norm == "none" or self.norm is None:
+        elif self.norm is None:
             pass
         else:
             raise ValueError(f"Invalid normalization method: {self.norm}")
