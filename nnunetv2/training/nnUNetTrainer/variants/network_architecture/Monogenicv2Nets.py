@@ -19,6 +19,9 @@ from dynamic_network_architectures.building_blocks.simple_conv_blocks import Sta
 
 
 class Monov2UNet(ResidualEncoderUNet):
+    """
+    Has no instance normalization after the mono2d layer. Normalization is static and done inside the Mono2DV2 layer.
+    """
     def __init__(self, mono_layer_kwargs: dict = {}, input_channels: int = 1, *args, **kwargs):
         mono_frontend = Mono2DV2(in_channels=input_channels, norm="std", **mono_layer_kwargs)
         input_channels = mono_frontend.out_channels
@@ -33,9 +36,10 @@ class Monov2UNet(ResidualEncoderUNet):
 class Monov2UNet01(ResidualEncoderUNet):
     """
     Has instance normalization after the mono2d layer.
+    Aim is to see if learning the normalization parameters is better than using a static normalization.
     """
     def __init__(self, mono_layer_kwargs: dict = {}, input_channels: int = 1, *args, **kwargs):
-        mono_frontend = Mono2DV2(in_channels=input_channels, norm="std", **mono_layer_kwargs)
+        mono_frontend = Mono2DV2(in_channels=input_channels, norm=None, **mono_layer_kwargs)
         input_channels = mono_frontend.out_channels
         super().__init__(input_channels=input_channels, *args, **kwargs)
         self.encoder.mono_frontend = nn.Sequential(
