@@ -378,7 +378,7 @@ class Mono2DV2(Mono2D):
         x = x.to(dtype=torch.float32)
         B, C, rows, cols = x.size()
         # Transform the input image to frequency domain
-        IM = torch.fft.fft2(x, dim=(-2, -1)).to(self.get_device())    # FLOPS = 5 × H × W × log₂(H × W)
+        IM = torch.fft.fft2(x, dim=(-2, -1), norm="ortho").to(self.get_device())    # FLOPS = 5 × H × W × log₂(H × W)
 
         # Get filters
         H, lgf = self.get_filters(rows, cols)
@@ -408,7 +408,7 @@ class Mono2DV2(Mono2D):
         ori = torch.atan2(-h2,h1)
 
         # Feature type - a phase angle +/- pi.
-        ft = torch.atan(f/torch.sqrt(h1 ** 2 + h2 ** 2))            # FLOPS = 1 × H × W
+        ft = torch.atan2(f, torch.sqrt(h1 ** 2 + h2 ** 2 + self.episilon))       # Add episilon for stable gradients            # FLOPS = 1 × H × W
         
         out = []
         if self.return_input:
