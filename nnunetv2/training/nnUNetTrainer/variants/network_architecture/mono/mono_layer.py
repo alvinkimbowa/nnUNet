@@ -443,7 +443,7 @@ class Mono2DV2(Mono2D):
         # Reshape fo to be broadcastable with radius
         fo = fo.view(self.in_channels, self.nscale, 1, 1)
         # The parameter sigmaonf is in the range -inf to inf. Rescale it to 0-1
-        sigmaonf = torch.nn.functional.sigmoid(self.sigmaonf).view(self.in_channels, self.nscale, 1, 1)
+        sigmaonf = torch.sigmoid(self.sigmaonf).view(self.in_channels, self.nscale, 1, 1)
         # Construct the filter
         filter = torch.exp((-(torch.log(radius/fo)) ** 2) / (2 * torch.log(sigmaonf) ** 2))
         return filter.to(self.get_device())
