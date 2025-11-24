@@ -55,7 +55,7 @@ class Mono2D(nn.Module):
         self.norm = norm
 
         assert nscale > 0
-        self.nscale = nn.Parameter(torch.tensor(nscale, dtype=torch.int), requires_grad=False)
+        self.nscale = nscale
 
         # Fixed parameters
         # According to Nyquist theorem, the smallest wavelength should be 2 pixels to avoid aliasing.
@@ -330,7 +330,7 @@ class Mono2D(nn.Module):
     def get_params(self):
         # return a dictionary of the parameters
         return {
-            "nscale": self.nscale.item(),
+            "nscale": self.nscale,
             "wls": self.get_wls().tolist(),
             "sigmaonf": self.get_sigmaonf().item(),
             "return_phase": self.return_phase,
@@ -350,7 +350,7 @@ class Mono2D(nn.Module):
     
     def extra_repr(self) -> str:
         return (
-            f"nscale={int(self.nscale.item())}, "
+            f"nscale={self.nscale}, "
             f"norm={self.norm}, "
             f"return_input={self.return_input}, "
             f"return_phase={self.return_phase}, "
