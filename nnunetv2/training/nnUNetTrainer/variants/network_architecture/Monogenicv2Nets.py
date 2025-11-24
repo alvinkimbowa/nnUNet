@@ -79,7 +79,7 @@ class Monov2UNetEncoder(ResidualEncoderUNet):
         return super().forward(x)
 
 
-class Monov2UNet(Monov2UNetEncoder):
+class Monov2EncDecUNet(Monov2UNetEncoder):
     def __init__(self, mono_layer_kwargs: dict = {}, input_channels: int = 1, *args, **kwargs):
         super().__init__(mono_layer_kwargs=mono_layer_kwargs, input_channels=input_channels, *args, **kwargs)
 

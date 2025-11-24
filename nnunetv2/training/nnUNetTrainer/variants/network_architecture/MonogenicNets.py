@@ -49,10 +49,16 @@ class MonoGatedUNet(MonoBaseNet):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Learnable affine for gate and residual strength
+        self.gate_weight = nn.Parameter(torch.ones(1))
+        self.gate_bias = nn.Parameter(torch.zeros(1))
+        self.alpha = nn.Parameter(torch.randn(1))
         print("\n\nUsing MonoGatedUNet with mono2d layer\n\n")
     
     def forward(self, x):
-        x = x * self.mono2d(x)
+        mono_feat = self.mono2d(x)
+        gate = torch.sigmoid(self.gate_weight * mono_feat + self.gate_bias)
+        x = x * (1 + self.alpha * gate)     # Use a residual connection to stabilize training
         return super().forward(x)
 
 
