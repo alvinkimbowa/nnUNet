@@ -36,7 +36,7 @@ class Mono2D(nn.Module):
     #------------------------------------------------------------------------
 
     def __init__(
-        self, nscale: int = 1, sigmaonf: list = None, wls: list = None,
+        self, in_channels: int, nscale: int = 1, sigmaonf: list = None, wls: list = None,
         return_phase: bool = True, return_phase_asym: bool = False, return_phase_sym: bool = False,
         return_ori: bool = False, return_input: bool = False, norm: str = "std",
         T: float = 0.0, cut_off: float = 0.5, g: int = 10, episilon: float = 0.0001,
@@ -46,6 +46,7 @@ class Mono2D(nn.Module):
         super(Mono2D, self).__init__()
 
         # Hyperparameters - these can be tuned
+        self.in_channels = in_channels
         self.return_phase = return_phase
         self.return_phase_sym = return_phase_sym
         self.return_phase_asym = return_phase_asym
@@ -55,7 +56,7 @@ class Mono2D(nn.Module):
         self.norm = norm
 
         assert nscale > 0
-        self.nscale = nn.Parameter(torch.tensor(nscale, dtype=torch.int), requires_grad=False)
+        self.nscale = nscale
 
         # Fixed parameters
         # According to Nyquist theorem, the smallest wavelength should be 2 pixels to avoid aliasing.
@@ -80,9 +81,11 @@ class Mono2D(nn.Module):
         self.episilon = episilon
 
     def forward(self, x):
-        _, _, rows, cols = x.size()
+        x = x.to(dtype=torch.float32)   # For stable FFT computation
+        B, C, rows, cols = x.size()
         # Transform the input image to frequency domain
         IM = torch.fft.fft2(x).to(self.get_device())
+        IM = IM.view(B, C, 1, rows, cols)   # Process each channel separately
 
         # Get filters
         H, lgf = self.get_filters(rows, cols)
@@ -105,21 +108,21 @@ class Mono2D(nn.Module):
         symmetry_energy = torch.abs(f) - torch.sqrt(h_Amp2)
                 
         # Compute the phase asymmetry and phase symmetry
-        phase_sym = torch.sum(An * torch.clamp(symmetry_energy - self.T, min=0), dim=1) / (torch.sum(An, dim=1) + self.episilon)
-        phase_asym = torch.sum(torch.clamp(-symmetry_energy - self.T, min=0), dim=1) / (torch.sum(An, dim=1) + self.episilon)
+        phase_sym = torch.sum(An * torch.clamp(symmetry_energy - self.T, min=0), dim=2) / (torch.sum(An, dim=2) + self.episilon)
+        phase_asym = torch.sum(torch.clamp(-symmetry_energy - self.T, min=0), dim=2) / (torch.sum(An, dim=2) + self.episilon)
         
         # Sum all responses across all scales
-        f = torch.sum(f, dim=1)
-        h1 = torch.sum(h1, dim=1)
-        h2 = torch.sum(h2, dim=1)
-        h_Amp2 = torch.sum(h_Amp2, dim=1)
+        f = torch.sum(f, dim=2)
+        h1 = torch.sum(h1, dim=2)
+        h2 = torch.sum(h2, dim=2)
+        h_Amp2 = torch.sum(h_Amp2, dim=2)
 
         # Orientation - this varies +/- pi
         ori = torch.atan2(-h2,h1)
         # ori = self.scale_max_min(ori) # Normalizing angles loses circularity
 
         # Feature type - a phase angle +/- pi.
-        ft = torch.atan(f/torch.sqrt(h1 ** 2 + h2 ** 2))
+        ft = torch.atan2(f, torch.sqrt(h1 ** 2 + h2 ** 2 + self.episilon))       # Add episilon for stable gradients
         
         out = []
         if self.return_input:
@@ -133,7 +136,8 @@ class Mono2D(nn.Module):
         if self.return_phase_asym:
             out.append(phase_asym)
 
-        out = torch.stack(out, dim=1)
+        out = torch.cat([o.reshape(B, -1, o.shape[-2], o.shape[-1]) for o in out], dim=1)
+        
         if self.norm == "std":
             out = self.std_normalize(out)
         elif self.norm == "min_max":
@@ -184,7 +188,7 @@ class Mono2D(nn.Module):
         # Obtain the center frequencies
         fo = 1.0 / wls
         # Reshape fo to be broadcastable with radius
-        fo = fo.view(-1, 1, 1)
+        fo = fo.view(self.in_channels, self.nscale, 1, 1)
         # The parameter sigmaonf is in the range -inf to inf. Rescale it to 0-1
         sigmaonf = torch.nn.functional.sigmoid(self.sigmaonf)
         # Construct the filter
@@ -297,7 +301,7 @@ class Mono2D(nn.Module):
     
     def initialize_wls(self, wls):
         if wls is None:
-            return torch.randn(self.nscale)
+            return torch.randn(self.in_channels, self.nscale)
         else:
             wls = np.asarray(wls)  # Convert to numpy array for comparison
             assert np.all(wls > 0)  # Cannot have a negative wavelength
@@ -330,7 +334,7 @@ class Mono2D(nn.Module):
     def get_params(self):
         # return a dictionary of the parameters
         return {
-            "nscale": self.nscale.item(),
+            "nscale": self.nscale,
             "wls": self.get_wls().tolist(),
             "sigmaonf": self.get_sigmaonf().item(),
             "return_phase": self.return_phase,
@@ -350,7 +354,7 @@ class Mono2D(nn.Module):
     
     def extra_repr(self) -> str:
         return (
-            f"nscale={int(self.nscale.item())}, "
+            f"nscale={self.nscale}, "
             f"norm={self.norm}, "
             f"return_input={self.return_input}, "
             f"return_phase={self.return_phase}, "
