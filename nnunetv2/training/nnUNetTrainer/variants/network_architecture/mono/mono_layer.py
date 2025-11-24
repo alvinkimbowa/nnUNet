@@ -81,6 +81,7 @@ class Mono2D(nn.Module):
         self.episilon = episilon
 
     def forward(self, x):
+        x = x.to(dtype=torch.float32)   # For stable FFT computation
         B, C, rows, cols = x.size()
         # Transform the input image to frequency domain
         IM = torch.fft.fft2(x).to(self.get_device())
@@ -121,7 +122,7 @@ class Mono2D(nn.Module):
         # ori = self.scale_max_min(ori) # Normalizing angles loses circularity
 
         # Feature type - a phase angle +/- pi.
-        ft = torch.atan(f/torch.sqrt(h1 ** 2 + h2 ** 2))
+        ft = torch.atan2(f, torch.sqrt(h1 ** 2 + h2 ** 2 + self.episilon))       # Add episilon for stable gradients
         
         out = []
         if self.return_input:
