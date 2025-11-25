@@ -21,7 +21,10 @@ from nnunetv2.training.nnUNetTrainer.variants.network_architecture.mono.mono_lay
 class MonoBaseNet(ResidualEncoderUNet):
     def __init__(self, mono_layer_kwargs: dict = {}, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mono2d = Mono2D(**mono_layer_kwargs, norm="std")
+        self.mono2d = Mono2D(
+            in_channels=kwargs.get("input_channels", 1),
+            norm="std", **mono_layer_kwargs
+        )
 
 
 class MonoUNet(MonoBaseNet):
