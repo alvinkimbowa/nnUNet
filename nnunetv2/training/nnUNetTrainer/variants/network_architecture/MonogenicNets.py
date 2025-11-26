@@ -220,8 +220,6 @@ class MonoEncDecUNetv1(MonoEncUNetv1):
             kwargs.get("n_conv_per_stage_decoder"),
             kwargs.get("deep_supervision")
         )
-        print("encoder:", self.encoder)
-        print("decoder:", self.decoder)
 
 
 class MonoResidualEncoder(nn.Module):
