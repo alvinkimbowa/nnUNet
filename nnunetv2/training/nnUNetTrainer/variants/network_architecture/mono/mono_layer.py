@@ -354,6 +354,8 @@ class Mono2D(nn.Module):
     
     def extra_repr(self) -> str:
         return (
+            f"in_channels={self.in_channels}, "
+            f"out_channels={self.in_channels}, "
             f"nscale={self.nscale}, "
             f"norm={self.norm}, "
             f"return_input={self.return_input}, "
