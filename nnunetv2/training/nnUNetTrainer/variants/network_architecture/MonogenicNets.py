@@ -138,6 +138,57 @@ class MonoEncDecUNet(MonoEncUNet):
         )
 
 
+class MonoDecUNet(ResidualEncoderUNet):
+    def __init__(self, mono_layer_kwargs: dict = {}, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.decoder = MonoUNetDecoder(
+            mono_layer_kwargs,
+            self.encoder,
+            kwargs.get("num_classes"),
+            kwargs.get("n_conv_per_stage_decoder"),
+            kwargs.get("deep_supervision")
+        )
+
+        self.mono2d = Mono2D(in_channels=kwargs["input_channels"], norm="std", **mono_layer_kwargs)
+        print("\n\nUsing MonoEncUNet with mono2d layer\n\n")
+        
+    def forward(self, x):
+        x = self.mono2d(x)
+        return super().forward(x)
+
+
+class MonoDecUNetv0(MonoDecUNet):
+    def __init__(self, mono_layer_kwargs: dict = {}, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.decoder = MonoUNetDecoderv0(
+            mono_layer_kwargs,
+            self.encoder,
+            kwargs.get("num_classes"),
+            kwargs.get("n_conv_per_stage_decoder"),
+            kwargs.get("deep_supervision")
+        )
+    
+    def forward(self, x):
+        x = self.mono2d(x)
+        skips = self.encoder(x)
+        return self.decoder((skips, x))
+
+
+class MonoDecUNetv1(MonoDecUNet):
+    def __init__(self, mono_layer_kwargs: dict = {}, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.decoder = MonoUNetDecoderv1(
+            mono_layer_kwargs,
+            self.encoder,
+            kwargs.get("num_classes"),
+            kwargs.get("n_conv_per_stage_decoder"),
+            kwargs.get("deep_supervision")
+        )
+
+
 class MonoEncDecUNetv0(MonoEncUNetv0):
     """
     ResidualEncoderUNet with Monogenic layer at both the encoder front-end and decoder back-end.
