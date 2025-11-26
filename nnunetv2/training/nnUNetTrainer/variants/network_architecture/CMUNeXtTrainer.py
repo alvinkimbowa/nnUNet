@@ -24,7 +24,8 @@ class CMUNeXtTrainer(nnUNetTrainer):
             num_classes=num_output_channels,
             dims=[16, 32, 128, 160, 256],
             depths=[1, 1, 1, 3, 1],
-            kernels=[3, 3, 7, 7, 7]
+            kernels=[3, 3, 7, 7, 7],
+            deep_supervision=enable_deep_supervision
         )
     
     def set_deep_supervision_enabled(self, enabled: bool):
@@ -57,7 +58,8 @@ class CMUNeXtTrainer_S(CMUNeXtTrainer):
             num_classes=num_output_channels,
             dims=[8, 16, 32, 64, 128],
             depths=[1, 1, 1, 1, 1],
-            kernels=[3, 3, 7, 7, 9]
+            kernels=[3, 3, 7, 7, 9],
+            deep_supervision=enable_deep_supervision
         )
 
 
