@@ -119,6 +119,26 @@ class UNeXtTrainer_S1(UNeXtTrainer):
             img_size=patch_size[0]
         )
 
+
+class UNeXtTrainer_S2(UNeXtTrainer):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   patch_size: List[int],
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+        
+        return UNext(
+            num_classes=num_output_channels,
+            input_channels=num_input_channels,
+            deep_supervision=enable_deep_supervision,
+            embed_dims=[2, 4, 8, 16, 32],
+            img_size=patch_size[0]
+        )
+
+
 class UNeXtTrainer_S4(UNeXtTrainer):
     @staticmethod
     def build_network_architecture(architecture_class_name: str,
