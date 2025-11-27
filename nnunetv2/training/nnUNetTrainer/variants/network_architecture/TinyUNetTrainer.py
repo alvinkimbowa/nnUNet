@@ -21,6 +21,7 @@ class TinyUNetTrainer(nnUNetTrainer):
         return TinyUNet(
             in_channels=num_input_channels,
             num_classes=num_output_channels,
+            out_filters=[64, 128, 256, 512],
             deep_supervision=enable_deep_supervision
         )
     
@@ -37,6 +38,42 @@ class TinyUNetTrainer(nnUNetTrainer):
             mod = mod._orig_mod
         
         mod.deep_supervision = enabled
+
+
+class TinyUNetTrainer_S32(TinyUNetTrainer):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   patch_size: List[int],
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return TinyUNet(
+            in_channels=num_input_channels,
+            num_classes=num_output_channels,
+            out_filters=[32, 64, 128, 256],
+            deep_supervision=enable_deep_supervision
+        )
+
+
+class TinyUNetTrainer_S16(TinyUNetTrainer):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   patch_size: List[int],
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return TinyUNet(
+            in_channels=num_input_channels,
+            num_classes=num_output_channels,
+            out_filters=[16, 32, 64, 128],
+            deep_supervision=enable_deep_supervision
+        )
 
 
 def autopad(k, p=None, d=1):  
@@ -141,15 +178,15 @@ class TinyUNet(nn.Module):
     in_channels: The number of input channels
     num_classes: The number of segmentation classes
     '''
-    def __init__(self, in_channels=3, num_classes=2, deep_supervision=True):
+    def __init__(self, in_channels=3, num_classes=2, out_filters=[64, 128, 256, 512], deep_supervision=True):
         super(TinyUNet, self).__init__()
-        in_filters      = [192, 384, 768, 1024]
-        out_filters     = [64, 128, 256, 512]
+        in_filters = [o * 3 for o in out_filters]
+        in_filters[-1] = out_filters[-1] * 2
         
-        self.encoder1   = UNetEncoder(in_channels, 64)
-        self.encoder2   = UNetEncoder(64, 128)
-        self.encoder3   = UNetEncoder(128, 256)
-        self.encoder4   = UNetEncoder(256, 512)
+        self.encoder1   = UNetEncoder(in_channels, out_filters[0])
+        self.encoder2   = UNetEncoder(out_filters[0], out_filters[1])
+        self.encoder3   = UNetEncoder(out_filters[1], out_filters[2])
+        self.encoder4   = UNetEncoder(out_filters[2], out_filters[3])
 
         self.decoder4   = UNetDecoder(in_filters[3], out_filters[3])
         self.decoder3   = UNetDecoder(in_filters[2], out_filters[2])
