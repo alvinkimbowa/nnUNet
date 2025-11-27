@@ -2,11 +2,7 @@ import torch
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from typing import Union, Tuple, List
 from torch import nn
-from nnunetv2.training.nnUNetTrainer.variants.network_architecture.unext.archs import UNext
 from torch._dynamo import OptimizedModule
-from nnunetv2.utilities.label_handling.label_handling import determine_num_input_channels
-from nnunetv2.training.dataloading.nnunet_dataset import infer_dataset_class
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 
 class CMUNeXtTrainer(nnUNetTrainer):
