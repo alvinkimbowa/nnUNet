@@ -63,6 +63,66 @@ class CMUNeXtTrainer_S(CMUNeXtTrainer):
         )
 
 
+class CMUNeXtTrainer_S4(CMUNeXtTrainer):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   patch_size: List[int],
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return CMUNeXt(
+            input_channel=num_input_channels,
+            num_classes=num_output_channels,
+            dims=[4, 8, 16, 32, 64],
+            depths=[1, 1, 1, 1, 1],
+            kernels=[3, 3, 7, 7, 9],
+            deep_supervision=enable_deep_supervision
+        )
+
+
+class CMUNeXtTrainer_S2(CMUNeXtTrainer):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   patch_size: List[int],
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return CMUNeXt(
+            input_channel=num_input_channels,
+            num_classes=num_output_channels,
+            dims=[2, 4, 8, 16, 32],
+            depths=[1, 1, 1, 1, 1],
+            kernels=[3, 3, 7, 7, 9],
+            deep_supervision=enable_deep_supervision
+        )
+
+
+class CMUNeXtTrainer_S1(CMUNeXtTrainer):
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   patch_size: List[int],
+                                   enable_deep_supervision: bool = True) -> nn.Module:
+
+        return CMUNeXt(
+            input_channel=num_input_channels,
+            num_classes=num_output_channels,
+            dims=[1, 2, 4, 8, 16],
+            depths=[1, 1, 1, 1, 1],
+            kernels=[3, 3, 7, 7, 9],
+            deep_supervision=enable_deep_supervision
+        )
+
+
 class Residual(nn.Module):
     def __init__(self, fn):
         super().__init__()
